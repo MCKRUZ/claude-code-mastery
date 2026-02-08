@@ -160,6 +160,21 @@ After changes: `pnpm build && pnpm test`
 
 ---
 
+## Template: Task Approach Section (Add to Any CLAUDE.md)
+
+```markdown
+## Task Approach
+When given a feature request or task:
+1. **Clarify before coding.** If the request is ambiguous or could go multiple directions, ask 1-2 targeted questions first. Don't guess at requirements.
+2. **Present options when trade-offs exist.** If there are meaningful architectural choices, briefly present 2-3 options with trade-offs and let me choose.
+3. **Scope the work.** Before writing code, state what you plan to do: which files, what approach, what you'll verify. Wait for a thumbs up on big changes.
+4. **Implement in layers.** For full-stack features: domain model → application layer → API → frontend → tests. Don't jump straight to UI.
+5. **Verify as you go.** Run build/test after each meaningful change, not just at the end.
+6. **Flag risks.** If something could break existing functionality, affect performance, or have security implications, call it out before proceeding.
+```
+
+---
+
 ## Template: .claude/rules/ Path-Scoped Rule
 
 ```yaml

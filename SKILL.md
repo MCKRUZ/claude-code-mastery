@@ -89,6 +89,15 @@ The single highest-leverage configuration. Arize AI measured ~11% better code ou
 ## Verification
 After changes: `[build] && [test]`
 
+## Task Approach
+When given a feature request or task:
+1. **Clarify before coding.** If ambiguous, ask 1-2 targeted questions first.
+2. **Present options when trade-offs exist.** Briefly show 2-3 approaches and let me choose.
+3. **Scope the work.** State your plan (files, approach, verification) before big changes.
+4. **Implement in layers.** Inner layers first, outer layers last, tests at the end.
+5. **Verify as you go.** Run build/test after each meaningful change.
+6. **Flag risks.** Call out anything that could break existing functionality.
+
 ## Common Mistakes (Add as you find them)
 - [Mistake 1]: [What to do instead]
 ```
