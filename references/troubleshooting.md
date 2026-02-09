@@ -115,6 +115,53 @@ Both are loaded and merged. `claude doctor` only validates `.claude.json`. When 
 4. Check if server requires env vars that aren't set
 5. For remote HTTP servers, verify OAuth flow completed
 
+### "GitHub MCP Server: Incompatible auth server / does not support dynamic client registration"
+
+**Problem:** You see this error when trying to connect the GitHub MCP server at `https://api.githubcopilot.com/mcp/`:
+```
+Status: ✗ failed
+Auth: ✗ not authenticated
+Error: Incompatible auth server: does not support dynamic client registration
+```
+
+**Cause:** The GitHub Copilot MCP endpoint requires special OAuth authentication that's not compatible with Claude Code's dynamic client registration.
+
+**Fix:** Replace with the official GitHub MCP server:
+
+1. **Open** `~/.claude.json` (or `~/.claude/settings.json` if the server is there)
+
+2. **Replace** the GitHub server configuration:
+   ```json
+   // BEFORE (doesn't work):
+   "github": {
+     "type": "http",
+     "url": "https://api.githubcopilot.com/mcp/"
+   }
+
+   // AFTER (works):
+   "github": {
+     "type": "stdio",
+     "command": "cmd",
+     "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-github"],
+     "env": {
+       "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+     }
+   }
+   ```
+
+3. **Create a GitHub Personal Access Token:**
+   - Go to https://github.com/settings/tokens
+   - Click "Generate new token" → "Generate new token (classic)"
+   - Name: `Claude Code MCP`
+   - Scopes: `repo`, `read:org`, `read:user`
+   - Click "Generate token" and **copy it immediately**
+
+4. **Add the token** to the `GITHUB_PERSONAL_ACCESS_TOKEN` field in your config
+
+5. **Restart Claude Code**
+
+**Verify:** Run `claude mcp list` and the GitHub server should show as connected.
+
 ### "Hooks not firing"
 **Check:**
 1. Hook is in correct settings level (project `.claude/settings.json` for project hooks)

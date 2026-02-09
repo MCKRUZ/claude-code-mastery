@@ -153,24 +153,29 @@ MCP servers extend Claude's built-in capabilities (file I/O, git, shell, grep, g
 **Configuration methods (all work in PowerShell):**
 
 ```powershell
-# Remote HTTP (recommended for cloud services, supports OAuth)
-claude mcp add --transport http github https://api.githubcopilot.com/mcp/
-
 # Local stdio (Windows: use cmd /c wrapper for npx commands)
 claude mcp add -s user context7 -- cmd /c npx -y @upstash/context7-mcp
 
+# GitHub MCP with Personal Access Token (requires env var)
+claude mcp add -s user github -- cmd /c npx -y @modelcontextprotocol/server-github --env GITHUB_PERSONAL_ACCESS_TOKEN=your_token_here
+
 # With env vars
 claude mcp add -s local postgres -- cmd /c npx -y @modelcontextprotocol/server-postgres --env POSTGRES_URL=postgresql://localhost/mydb
+
+# Remote HTTP (for compatible cloud services with OAuth)
+claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 
 # Scopes: --scope user (global) / --scope local (project, personal) / --scope project (shared via .mcp.json)
 ```
 
 > **Windows gotcha:** `claude mcp add` writes to `~/.claude.json`, which requires `cmd /c` before `npx`. Servers in `~/.claude/settings.json` may work without it. Run `claude doctor` to detect issues.
 
+> **GitHub MCP note:** The GitHub Copilot endpoint (`https://api.githubcopilot.com/mcp/`) does NOT work with Claude Code due to incompatible auth. Use the official `@modelcontextprotocol/server-github` package with a GitHub Personal Access Token instead. See troubleshooting.md for detailed setup.
+
 **Recommended tiers:**
 
 **Tier 1 — Essential:**
-- **GitHub MCP** (`https://api.githubcopilot.com/mcp/`) — Repos, PRs, issues, CI/CD
+- **GitHub MCP** (`@modelcontextprotocol/server-github`) — Repos, PRs, issues, CI/CD (requires GitHub token)
 - **Context7** (`@upstash/context7-mcp`) — Current library docs (solves hallucinated APIs)
 - **Sequential Thinking** (`@modelcontextprotocol/server-sequential-thinking`) — Better planning
 
@@ -188,11 +193,23 @@ claude mcp add -s local postgres -- cmd /c npx -y @modelcontextprotocol/server-p
 ```json
 {
   "mcpServers": {
-    "github": { "type": "http", "url": "https://api.githubcopilot.com/mcp/" },
-    "sentry": { "type": "http", "url": "https://mcp.sentry.dev/mcp" }
+    "github": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+      }
+    },
+    "sentry": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp"
+    }
   }
 }
 ```
+
+> **Note:** Don't commit your GitHub token to git! Leave `GITHUB_PERSONAL_ACCESS_TOKEN` empty in `.mcp.json` and set it in your user-level `~/.claude/settings.json` or `~/.claude.json` instead, or use environment variables.
 
 ### Pillar 4: Settings, Permissions, and Hooks
 
@@ -254,7 +271,65 @@ claude mcp add -s local postgres -- cmd /c npx -y @modelcontextprotocol/server-p
 
 **Hook types:** `command` (shell) and `prompt` (LLM-based evaluation using Haiku).
 
-### Pillar 5: Agent Teams (Experimental)
+### Pillar 5: Agents and Subagents
+
+**Two types of agents available:**
+
+#### Built-in Subagent Types
+
+Claude Code includes specialized subagents invoked via the `Task` tool with `subagent_type` parameter:
+
+| Agent | Purpose | When to Use |
+|-------|---------|-------------|
+| **planner** | Implementation planning | Complex features, refactoring |
+| **architect** | System design | Architectural decisions |
+| **tdd-guide** | Test-driven development | New features, bug fixes |
+| **code-reviewer** | Code review | After writing code |
+| **security-reviewer** | Security analysis | Before commits |
+| **build-error-resolver** | Fix build errors | When build fails |
+| **e2e-runner** | E2E testing | Critical user flows |
+| **refactor-cleaner** | Dead code cleanup | Code maintenance |
+| **doc-updater** | Documentation | Updating docs |
+
+**Usage pattern:**
+```typescript
+// Invoke built-in subagent
+Task(subagent_type: "code-reviewer", prompt: "Review auth.ts for security issues")
+```
+
+**Proactive usage:** Use planner, architect, tdd-guide, and code-reviewer agents automatically without waiting for user prompt when appropriate.
+
+#### Custom Agents
+
+Create project or domain-specific agents in `~/.claude/agents/` (global) or `.claude/agents/` (project-local):
+
+**Agent file format** (`~/.claude/agents/my-agent/AGENT.md`):
+```yaml
+---
+name: my-custom-agent
+description: What this agent does
+tools: Read, Grep, Glob, Bash
+model: sonnet
+---
+You are a [role]. Your responsibilities are:
+- [Responsibility 1]
+- [Responsibility 2]
+
+[Additional instructions...]
+```
+
+**Example:**
+```yaml
+---
+name: security-reviewer
+description: Expert security auditor for code review
+tools: Read, Grep, Glob, Bash
+model: sonnet
+---
+You are a senior security reviewer. Focus on authentication, authorization, input validation, and data handling.
+```
+
+#### Agent Teams (Experimental)
 
 Multi-agent orchestration: Team Lead + Teammates with shared task lists and peer-to-peer messaging.
 
@@ -262,7 +337,7 @@ Multi-agent orchestration: Team Lead + Teammates with shared task lists and peer
 
 **When to use what:**
 - **Single agent:** Routine tasks, small fixes
-- **Subagents:** Quick parallel research, isolated delegation ("go check if tests pass")
+- **Subagents:** Quick parallel research, isolated delegation
 - **Agent Teams:** Discussion, coordination, competing hypotheses, parallel dev across independent files
 
 **Critical gotchas:**
@@ -273,18 +348,6 @@ Multi-agent orchestration: Team Lead + Teammates with shared task lists and peer
 - **Avoid broadcasts.** Use targeted direct messages (broadcasts multiply cost by team size).
 
 **Best pattern: Adversarial (implement + review agents).** LLMs are significantly better in review mode than implementation mode.
-
-**Custom agents (`.claude/agents/`):**
-
-```yaml
----
-name: security-reviewer
-description: Expert security auditor for code review
-tools: Read, Grep, Glob, Bash
-model: sonnet
----
-You are a senior security reviewer. Focus on authentication, authorization, input validation, and data handling.
-```
 
 ### Pillar 6: Skills and Plugins
 
