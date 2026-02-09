@@ -61,6 +61,48 @@ If Git Bash is installed to a non-default location, adjust the path accordingly.
 
 ## Configuration Problems
 
+### "Claude Code hangs on startup / can't type"
+**Most common causes (check in order):**
+
+1. **Dead MCP packages.** If any MCP server references a package that doesn't exist on npm, `npx` will hang trying to resolve it. Test each server independently:
+   ```powershell
+   npx -y @upstash/context7-mcp  # Should start and print a message
+   ```
+   Known dead packages: `@anthropic/mcp-server-dotnet`, `@context7/mcp-server`.
+
+2. **Missing `cmd /c` wrapper in `.claude.json`.** MCP servers defined in `~/.claude.json` (not `settings.json`) require `cmd /c` on Windows:
+   ```json
+   {
+     "command": "cmd",
+     "args": ["/c", "npx", "-y", "@upstash/context7-mcp"]
+   }
+   ```
+   Run `claude doctor` to detect this — it will warn about servers needing the wrapper.
+
+3. **TUI input focus bug.** Claude Code launches and shows the prompt but won't accept keystrokes. Press `Enter` once to give the TUI input focus. This is a known quirk on Windows, especially with slow PowerShell profiles.
+
+4. **SessionStart hook hanging.** If a SessionStart hook script doesn't exist, has errors, or waits for input, it blocks startup. Test the script independently:
+   ```powershell
+   pwsh -NoProfile -ExecutionPolicy Bypass -File "C:/Users/<you>/.claude/hooks/memory-persistence/session-start.ps1"
+   ```
+
+**Nuclear option:** Rename `settings.json` and `.claude.json` temporarily to confirm Claude Code starts clean, then add configs back incrementally.
+
+### "Found N invalid settings files" warning
+**Cause:** Invalid JSON or unrecognized fields in settings files. The warning appears in the status bar at the bottom of Claude Code.
+**Fix:**
+1. Run `claude doctor` to see exactly which files and what's wrong
+2. Check **both** `~/.claude/settings.json` AND `~/.claude.json` for MCP issues
+3. Check project-level `.claude/settings.json` and `.mcp.json` in your current directory
+4. Common issues: bash-style redirects (`2>/dev/null`), invalid hook variables (`$file` instead of `$CLAUDE_FILE_PATH`), missing `cmd /c` wrapper for npx on Windows
+
+### "Two config files define MCP servers"
+**Explanation:** Claude Code has two places where MCP servers can be defined:
+- `~/.claude/settings.json` — Your main settings (hooks, permissions, env, mcpServers)
+- `~/.claude.json` — Claude Code's state file (also has a `mcpServers` section at the bottom)
+
+Both are loaded and merged. `claude doctor` only validates `.claude.json`. When troubleshooting, check both. Servers added via `claude mcp add -s user` go into `.claude.json`.
+
 ### "Custom agents not recognized"
 **Known issue:** GitHub #18212, #4728, #9930. Particularly on Linux ARM and certain plugin configs.
 **Workaround:** Ensure agents are in `.claude/agents/` (project) or `~/.claude/agents/` (user). Restart Claude Code. Try explicit invocation.

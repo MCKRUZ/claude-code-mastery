@@ -156,14 +156,16 @@ MCP servers extend Claude's built-in capabilities (file I/O, git, shell, grep, g
 # Remote HTTP (recommended for cloud services, supports OAuth)
 claude mcp add --transport http github https://api.githubcopilot.com/mcp/
 
-# Local stdio
-claude mcp add -s user context7 -- npx -y @upstash/context7-mcp
+# Local stdio (Windows: use cmd /c wrapper for npx commands)
+claude mcp add -s user context7 -- cmd /c npx -y @upstash/context7-mcp
 
 # With env vars
-claude mcp add -s local postgres -- npx -y @modelcontextprotocol/server-postgres --env POSTGRES_URL=postgresql://localhost/mydb
+claude mcp add -s local postgres -- cmd /c npx -y @modelcontextprotocol/server-postgres --env POSTGRES_URL=postgresql://localhost/mydb
 
 # Scopes: --scope user (global) / --scope local (project, personal) / --scope project (shared via .mcp.json)
 ```
+
+> **Windows gotcha:** `claude mcp add` writes to `~/.claude.json`, which requires `cmd /c` before `npx`. Servers in `~/.claude/settings.json` may work without it. Run `claude doctor` to detect issues.
 
 **Recommended tiers:**
 
@@ -230,21 +232,23 @@ claude mcp add -s local postgres -- npx -y @modelcontextprotocol/server-postgres
       {
         "matcher": "Write(*.py)",
         "hooks": [
-          { "type": "command", "command": "black $file" },
-          { "type": "command", "command": "ruff check $file --fix" }
+          { "type": "command", "command": "black \"$CLAUDE_FILE_PATH\"", "timeout": 10000 },
+          { "type": "command", "command": "ruff check \"$CLAUDE_FILE_PATH\" --fix", "timeout": 10000 }
         ]
       },
       {
         "matcher": "Write(*.ts)",
-        "hooks": [{ "type": "command", "command": "npx prettier --write $file" }]
+        "hooks": [{ "type": "command", "command": "npx prettier --write \"$CLAUDE_FILE_PATH\"", "timeout": 10000 }]
       }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "npm test -- --bail 2>/dev/null || true" }] }
+      { "hooks": [{ "type": "command", "command": "npm test -- --bail", "timeout": 30000 }] }
     ]
   }
 }
 ```
+
+> **Important:** Use `$CLAUDE_FILE_PATH` (not `$file`) for the file path variable. Always include a `timeout` value. Avoid bash-style redirects like `2>/dev/null || true` — they can cause issues on Windows.
 
 **Hook events:** PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit, Stop, SubagentStop, Notification, Setup, TeammateIdle, TaskCompleted.
 

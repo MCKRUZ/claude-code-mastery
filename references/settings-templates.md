@@ -97,20 +97,20 @@
       {
         "matcher": "Write(*.ts)",
         "hooks": [
-          { "type": "command", "command": "npx prettier --write $file" }
+          { "type": "command", "command": "npx prettier --write \"$CLAUDE_FILE_PATH\"", "timeout": 10000 }
         ]
       },
       {
         "matcher": "Write(*.tsx)",
         "hooks": [
-          { "type": "command", "command": "npx prettier --write $file" }
+          { "type": "command", "command": "npx prettier --write \"$CLAUDE_FILE_PATH\"", "timeout": 10000 }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "npx tsc --noEmit 2>/dev/null || true" }
+          { "type": "command", "command": "npx tsc --noEmit", "timeout": 30000 }
         ]
       }
     ]
@@ -136,15 +136,15 @@
       {
         "matcher": "Write(*.py)",
         "hooks": [
-          { "type": "command", "command": "uv run black $file" },
-          { "type": "command", "command": "uv run ruff check $file --fix" }
+          { "type": "command", "command": "uv run black \"$CLAUDE_FILE_PATH\"", "timeout": 10000 },
+          { "type": "command", "command": "uv run ruff check \"$CLAUDE_FILE_PATH\" --fix", "timeout": 10000 }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "uv run pytest --tb=short -q 2>/dev/null || true" }
+          { "type": "command", "command": "uv run pytest --tb=short -q", "timeout": 30000 }
         ]
       }
     ]
@@ -170,14 +170,14 @@
       {
         "matcher": "Write(*.cs)",
         "hooks": [
-          { "type": "command", "command": "dotnet format --include $file 2>/dev/null || true" }
+          { "type": "command", "command": "dotnet format --include \"$CLAUDE_FILE_PATH\"", "timeout": 10000 }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "dotnet build --no-restore -q 2>/dev/null || true" }
+          { "type": "command", "command": "dotnet build --no-restore -q", "timeout": 30000 }
         ]
       }
     ]
@@ -270,17 +270,27 @@
 
 ```powershell
 # Essential (run once, applies to all projects)
-claude mcp add -s user context7 -- npx -y @upstash/context7-mcp
-claude mcp add -s user sequential-thinking -- npx -y @modelcontextprotocol/server-sequential-thinking
+# NOTE: On Windows, servers added via `claude mcp add` go into ~/.claude.json
+# which requires the cmd /c wrapper. Use these commands:
+claude mcp add -s user context7 -- cmd /c npx -y @upstash/context7-mcp
+claude mcp add -s user sequential-thinking -- cmd /c npx -y @modelcontextprotocol/server-sequential-thinking
 
 # Optional but recommended
-claude mcp add -s user memory -- npx -y @modelcontextprotocol/server-memory
+claude mcp add -s user memory -- cmd /c npx -y @modelcontextprotocol/server-memory
 
 # Verify
 claude mcp list
+
+# Diagnose issues
+claude doctor
 ```
 
-**Note:** MCP servers that use `npx` require Node.js/npm on your PATH. If you installed Node.js via the Windows installer, this should work. If using NVM for Windows, ensure the active Node version is on PATH.
+**Windows notes:**
+- MCP servers added via `claude mcp add` go into `~/.claude.json` (the state file), NOT `~/.claude/settings.json`.
+- Servers in `.claude.json` require the `cmd /c` wrapper for `npx` commands on Windows.
+- Servers in `settings.json` may work without the wrapper (Claude Code handles it internally).
+- Run `claude doctor` to check for MCP configuration warnings.
+- If using NVM for Windows, ensure the active Node version is on PATH.
 
 ---
 

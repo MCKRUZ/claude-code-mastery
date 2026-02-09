@@ -5,6 +5,82 @@
 
 ---
 
+## 2026-02-09 — MCP & Hook Configuration Fixes (Real-World Debugging)
+
+### Critical Discovery: Two Config Files for MCP Servers
+Claude Code uses **two separate files** for MCP server configuration:
+- `~/.claude/settings.json` — The main settings file (hooks, permissions, env, mcpServers)
+- `~/.claude.json` — The Claude Code state file (also contains `mcpServers` at the bottom)
+
+Both files can define MCP servers, and both are loaded. `claude doctor` only flags issues in `.claude.json`, not `settings.json`. When troubleshooting MCP issues, check **both files**.
+
+### Windows MCP Server Fix: `cmd /c` Wrapper Required
+On Windows, MCP servers using `npx` as the command **must** be wrapped with `cmd /c`:
+
+**Broken (hangs on startup):**
+```json
+{
+  "command": "npx",
+  "args": ["-y", "@upstash/context7-mcp"]
+}
+```
+
+**Fixed:**
+```json
+{
+  "command": "cmd",
+  "args": ["/c", "npx", "-y", "@upstash/context7-mcp"]
+}
+```
+
+This applies to all stdio-based MCP servers in `.claude.json`. Servers defined in `settings.json` with `"command": "npx"` appear to work without the wrapper (Claude Code may handle this internally), but `.claude.json` entries require it.
+
+### Dead MCP Packages (Will Hang Startup)
+These packages do **not exist** on npm and will cause Claude Code to hang indefinitely during startup:
+- `@anthropic/mcp-server-dotnet` — Does not exist. No official Anthropic .NET MCP server.
+- `@context7/mcp-server` — Wrong package name. The correct package is `@upstash/context7-mcp`.
+- `@modelcontextprotocol/server-github` — Still works but is **deprecated**. Use the HTTP endpoint `https://api.githubcopilot.com/mcp/` instead.
+
+### Hook Variable Fix: `$file` → `$CLAUDE_FILE_PATH`
+Project-level hooks using `$file` as a variable placeholder is **not valid**. The correct environment variable is `$CLAUDE_FILE_PATH`:
+
+**Broken:**
+```json
+{ "type": "command", "command": "npx prettier --write $file 2>/dev/null || true" }
+```
+
+**Fixed:**
+```json
+{ "type": "command", "command": "npx prettier --write \"$CLAUDE_FILE_PATH\"", "timeout": 10000 }
+```
+
+Note: `2>/dev/null || true` bash redirects should also be removed from hook commands as they can cause issues. Add explicit `timeout` values instead.
+
+### TUI Input Focus Bug on Windows
+When launching Claude Code interactively (`claude` or `claude -c`), the TUI input may appear ready but not accept keystrokes. Pressing `Enter` once gives the TUI input focus and allows typing. This is a known quirk, particularly when launching from PowerShell with slow-loading profiles.
+
+### `claude doctor` — The Diagnostic Command
+- The command is `claude doctor` (no dashes), not `claude --doctor`
+- It checks MCP server configurations and reports warnings
+- It only checks `.claude.json` MCP servers, not `settings.json` MCP servers
+- Run it whenever you see "Found N invalid settings files" in the status bar
+
+### Updated Version Info
+- **Claude Code CLI:** v2.1.37 (up from v2.1.34)
+- Opus 4.6 now shown as default model with "Claude Max" tier
+- $50 free extra usage promotion active
+
+### Research Tracking Update
+| Date | Topic | Source | Finding |
+|------|-------|--------|---------|
+| 2026-02-09 | MCP cmd /c wrapper | Real-world debugging | Windows requires cmd /c for npx in .claude.json |
+| 2026-02-09 | Dead MCP packages | npm registry test | @anthropic/mcp-server-dotnet and @context7/mcp-server are 404 |
+| 2026-02-09 | Hook variables | Real-world debugging | $file is invalid, use $CLAUDE_FILE_PATH |
+| 2026-02-09 | Two config files | Real-world debugging | .claude.json and settings.json both define mcpServers |
+| 2026-02-09 | TUI focus bug | Real-world debugging | Press Enter to give TUI input focus on Windows |
+
+---
+
 ## 2026-02-07 — Initial Knowledge Snapshot
 
 ### Current Versions
