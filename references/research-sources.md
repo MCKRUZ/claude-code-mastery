@@ -18,7 +18,8 @@
 
 | Source | URL | What to look for |
 |--------|-----|-----------------|
-| awesome-claude-code | https://github.com/wong2/awesome-claude-code | New tools, plugins, integrations |
+| awesome-claude-code (wong2) | https://github.com/wong2/awesome-claude-code | New tools, plugins, integrations |
+| awesome-claude-code (hesreallyhim) | https://github.com/hesreallyhim/awesome-claude-code | **24.1k stars** — production-grade skills, hooks, orchestrators, workflows, CLAUDE.md templates, statusline tools. More curated and opinionated than wong2. Check for: new hooks, slash-commands, orchestration frameworks, usage dashboards |
 | awesome-claude-skills | https://github.com/ComposioHQ/awesome-claude-skills | Community skills, patterns |
 | r/ClaudeAI | https://reddit.com/r/ClaudeAI | User discoveries, workarounds, pain points |
 | r/ClaudeCode | https://reddit.com/r/ClaudeCode | Claude Code specific discussions |

@@ -1,7 +1,88 @@
 # Claude Code Knowledge Base
 
-> **Last updated:** 2026-02-07
+> **Last updated:** 2026-02-18
 > **Format:** Append-only log. New entries go at the top with dates. Never delete old entries.
+
+---
+
+## 2026-02-18 — Claude Sonnet 4.6, Windows ARM64, Auth CLI, MCP Tool Search
+
+### Claude Sonnet 4.6 Released (Feb 17, 2026)
+- Model ID: `claude-sonnet-4-6` — now added to Claude Code in **v2.1.45**
+- **70% user preference** over Sonnet 4.5 in Claude Code tasks
+- Better reads full context before modifying code; consolidates shared logic instead of duplicating
+- Human-level computer use capability (spreadsheets, multi-step web forms across browser tabs)
+- 200K context window (1M in beta), 64K max output tokens, extended + adaptive thinking
+- Web search / web fetch tools now support **dynamic filtering** — Claude writes code to filter results before they hit context
+- Free tier users now get: file creation, connectors, skills, and compaction
+
+### Version History Since v2.1.37 (as of 2026-02-18)
+| Version | Date | Key Changes |
+|---------|------|------------|
+| **v2.1.45** | Feb 17 | Sonnet 4.6 support, `spinnerTipsOverride` setting, SDK rate limit types, Agent Teams fixed on Bedrock/Vertex/Foundry, Task tool crash fixed, startup perf improved (no eager history load), memory improved for large shell output |
+| **v2.1.44** | Feb 16 | Fixed auth refresh errors |
+| **v2.1.42** | Feb 13 | Fixed `/resume` showing interrupt messages as titles, fixed Opus 4.6 launch announcement for Bedrock/Vertex/Foundry, improved image dimension error messages |
+| **v2.1.41** | Feb 13 | **Windows ARM64 native binary** (`win32-arm64`), `claude auth login/status/logout` CLI subcommands, fixed AWS auth refresh hanging (3-min timeout), `/rename` now auto-generates session names |
+| **v2.1.39** | Feb 10 | Improved terminal rendering performance, fixed fatal errors being swallowed, fixed process hanging after session close |
+| **v2.1.38** | Feb 10 | Fixed VS Code terminal scroll-to-top regression, Tab key queueing slash commands instead of autocompleting, text disappearing between tool uses |
+
+**Current latest:** v2.1.45
+
+### New CLI Auth Commands (v2.1.41)
+```powershell
+claude auth login    # Authenticate with Anthropic
+claude auth status   # Check current auth state
+claude auth logout   # Sign out
+```
+Replaces the old `claude --login` pattern. Useful for scripting and CI/CD.
+
+### Windows ARM64 Native Support (v2.1.41-42)
+- Native `win32-arm64` binary shipped in v2.1.41
+- VS Code extension falls back to x64 via emulation on ARM64 (v2.1.42 fix)
+- Install via `irm https://claude.ai/install.ps1 | iex` — auto-detects ARM64
+
+### MCP Tool Search — Lazy Loading (shipped ~January 2026, v2.1.x)
+**Major feature** that obsoletes the "20K token MCP limit" rule:
+- Triggered automatically when total MCP tool definitions exceed **10K tokens**
+- Loads a lightweight search index instead of all tool schemas upfront
+- Claude receives a `Tool Search` tool and fetches 3-5 relevant tools (~3K tokens) on demand
+- **Result:** Context reduced from ~77K tokens → ~8.7K tokens (85-95% reduction)
+- You can now run many MCP servers without the crippling context overhead
+- Old advice: "If using >20K tokens of MCPs, you're crippling Claude" — **now largely moot** with Tool Search enabled
+
+### New Slash Commands & UI Additions
+| Command/Feature | Since | Purpose |
+|----------------|-------|---------|
+| `/debug` | ~Feb 2026 | Asks Claude to troubleshoot the current session |
+| `Summarize from here` | ~Feb 2026 | Message selector option for partial conversation summarization |
+| `/rename` (improved) | v2.1.41 | Now auto-generates session names if none provided |
+
+### PR Integration Features (~Feb 2026)
+- `--from-pr` flag: Resume a session linked to a specific PR
+- Auto-linking: Sessions auto-link to PRs created via `gh pr create` within the session
+
+### MCP OAuth Pre-configured Credentials
+For MCP servers that don't support Dynamic Client Registration (e.g., Slack):
+```bash
+claude mcp add slack --client-id <id> --client-secret <secret> -- npx @slack/mcp-server
+```
+The `--client-id` and `--client-secret` flags store OAuth credentials for the server.
+
+### Agent Teams Status (as of Feb 2026) — Still Experimental
+Confirmed limitations still active:
+- In-process teammates are **not restored** when using `/resume` or `/rewind` — lead may message teammates that no longer exist
+- Teammates sometimes forget to mark tasks as completed — check manually if stuck
+- A lead manages one team at a time — clean up current team before starting another
+- Bedrock/Vertex/Foundry teammates failing — **fixed in v2.1.45**
+
+### Research Tracking Update
+| Date | Topic | Source | Finding |
+|------|-------|--------|---------|
+| 2026-02-18 | Sonnet 4.6 | Anthropic blog | Released Feb 17; 70% preference over Sonnet 4.5 in Claude Code |
+| 2026-02-18 | v2.1.45 | GitHub releases | Sonnet 4.6, startup perf, Task tool crash fix |
+| 2026-02-18 | v2.1.41 | GitHub releases | Windows ARM64, auth CLI commands |
+| 2026-02-18 | MCP Tool Search | Web research | 85-95% context reduction, lazy loading since Jan 2026 |
+| 2026-02-18 | Auth CLI | GitHub releases | claude auth login/status/logout in v2.1.41 |
 
 ---
 

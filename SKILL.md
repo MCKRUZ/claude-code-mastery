@@ -143,8 +143,9 @@ Claude Code operates within a 200K token context window (1M in beta for Opus 4.6
   ```
 - **Use subagents for exploration.** Instead of reading 15 files in main session, spawn a subagent: "use a subagent to investigate how authentication handles token refresh."
 - **Use `@file` strategically.** Direct file insertion avoids search overhead, but only reference what you need.
-- **Prefer CLI tools over MCP servers.** Each MCP server adds persistent tool definitions consuming tokens even when idle. CLI tools via Bash have zero idle overhead.
-- **Rule of thumb:** If you're using more than 20K tokens of MCP tool definitions, you're crippling Claude.
+- **MCP Tool Search (lazy loading):** As of January 2026, Claude Code auto-enables lazy loading when MCP tool definitions exceed 10K tokens. Instead of loading all schemas upfront (~77K tokens), it loads a search index (~8.7K tokens) and fetches 3-5 tools on demand. This reduces the old context penalty by 85-95%.
+- **CLI tools still have zero overhead.** Prefer them for simple tasks. But the old "20K token MCP limit" rule is now largely obsolete thanks to Tool Search.
+- **Rule of thumb (updated):** With Tool Search enabled, you can run many MCP servers freely. Without it (older versions), >20K tokens of MCP definitions will cripple Claude.
 
 ### Pillar 3: MCP Server Stack
 
@@ -178,6 +179,8 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 - **GitHub MCP** (`@modelcontextprotocol/server-github`) — Repos, PRs, issues, CI/CD (requires GitHub token)
 - **Context7** (`@upstash/context7-mcp`) — Current library docs (solves hallucinated APIs)
 - **Sequential Thinking** (`@modelcontextprotocol/server-sequential-thinking`) — Better planning
+
+> **MCP Tool Search (v2.1.x+):** Claude Code now lazy-loads MCP tool definitions when they exceed 10K tokens. This reduces context overhead by 85-95%, making it practical to run many more MCP servers simultaneously.
 
 **Tier 2 — Recommended for specific workflows:**
 - **Sentry** (`https://mcp.sentry.dev/mcp`) — Production error tracking
@@ -372,12 +375,21 @@ Multi-agent orchestration: Team Lead + Teammates with shared task lists and peer
 
 ### Pillar 7: CI/CD and Automation
 
+**Auth CLI (v2.1.41+):**
+
+```powershell
+claude auth login    # Authenticate (replaces claude --login)
+claude auth status   # Check auth state (useful in CI)
+claude auth logout   # Sign out
+```
+
 **Headless mode (`-p` / `--print`) — works in PowerShell:**
 
 ```powershell
 claude -p "Explain the architecture" --output-format json
 git diff HEAD~5 | claude -p "Review these changes for bugs"
 claude -p "Analyze codebase" --allowedTools "Read,Glob,Grep" --max-turns 10
+claude --from-pr 123  # Resume session linked to PR #123
 ```
 
 **GitHub Actions:**
@@ -442,6 +454,11 @@ claude doctor
 2. Add to PATH: Win+R -> `sysdm.cpl` -> Advanced -> Environment Variables -> Edit User PATH -> Add `C:\Users\<you>\.local\bin`
 3. Restart terminal
 
+**Windows ARM64 support (v2.1.41+):**
+- Native `win32-arm64` binary — no emulation required for the CLI
+- VS Code extension falls back to x64 via emulation on ARM64 (v2.1.42 fix)
+- The `irm https://claude.ai/install.ps1 | iex` installer auto-detects your architecture
+
 **If you get "requires git-bash" error:**
 
 ```powershell
@@ -473,6 +490,8 @@ claude doctor
 | `/model` | Switch Sonnet/Opus/Haiku |
 | `/resume` | Return to previous session |
 | `/plan` | Toggle read-only mode |
+| `/debug` | Ask Claude to diagnose the current session |
+| `/rename` | Rename session (auto-generates name if none given) |
 | `Shift+Tab` | Cycle permission modes |
 | `Escape` | Stop current operation |
 | `@file` | Reference file in prompt |
