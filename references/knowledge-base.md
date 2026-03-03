@@ -1,7 +1,119 @@
 # Claude Code Knowledge Base
 
-> **Last updated:** 2026-02-18
+> **Last updated:** 2026-03-03
 > **Format:** Append-only log. New entries go at the top with dates. Never delete old entries.
+
+---
+
+## 2026-03-03 — Hook Architecture Findings, v2.1.63, GitHub MCP Clarification
+
+### Current Version: v2.1.63
+(Up from v2.1.45 documented 2026-02-18)
+
+### Hook Architecture: Critical Findings from Real-World Debugging
+
+#### `type: "prompt"` at SessionStart fails with custom `ANTHROPIC_BASE_URL`
+When `ANTHROPIC_BASE_URL` is set to a custom proxy (LiteLLM, local gateway, etc.), `type: "prompt"` hooks make LLM evaluation calls through that proxy. Incompatible proxy responses cause the hook to fail with `SessionStart:startup hook error` shown in the UI header, even though command hooks in the same group succeed.
+
+**Symptom:** UI shows `SessionStart:startup hook error` while `SessionStart:startup hook success: Success` also appears (from the successful command hook in the same group).
+
+**Fix:** Remove `type: "prompt"` hooks from SessionStart entirely. The command hook's stdout is already injected into the conversation as a system-reminder — no prompt hook is needed for context injection.
+
+**Rule:** Only use `type: "prompt"` SessionStart hooks when you have a standard Anthropic API connection (no custom proxy).
+
+#### `type: "command"` Stop hooks cannot communicate back to Claude
+Stop hooks fire after Claude has finished its last response. Command hook stdout goes to the terminal only — Claude is done and cannot act on it.
+
+**Use case that works:** File operations (creating session logs, Langfuse tracing, VS Code notifications) — these don't need Claude. Fine as command hooks.
+
+**Anti-pattern:** Using a command hook at Stop to print "evaluate session for extractable patterns" — Claude can't read it and can't respond.
+
+**Fix:** For end-of-session Claude work, use `type: "prompt"` Stop hooks. These inject a prompt that Claude processes before fully stopping:
+
+```json
+{
+  "hooks": [{
+    "type": "prompt",
+    "prompt": "This session is ending. If this session had 10 or more meaningful exchanges and surfaced reusable patterns or architectural insights, call mcp__cmem__save_lesson for each one."
+  }]
+}
+```
+
+#### Global PreCompact prompt hooks: never hardcode project-specific paths
+A PreCompact prompt hook in the user-level `settings.json` runs for ALL projects. Hardcoding a specific project's MEMORY.md path (e.g., `C:\Users\you\.claude\projects\my-project\memory\MEMORY.md`) silently fails for every other project.
+
+**Fix:** Use project-agnostic instructions: "Update your project's MEMORY.md — the path is shown in your system instructions (auto-memory section)." Claude Code injects the current project's auto-memory path at session start, so Claude knows where to look.
+
+### GitHub MCP Clarification: npm package is still the correct approach
+
+**Correction to 2026-02-09 entry:** The statement that `@modelcontextprotocol/server-github` is "deprecated" was incorrect for Claude Code users.
+
+| Approach | Works with Claude Code? | Notes |
+|---------|------------------------|-------|
+| `npx @modelcontextprotocol/server-github` + PAT | ✅ Yes | Use this |
+| `https://api.githubcopilot.com/mcp/` HTTP endpoint | ❌ No | "Incompatible auth server: does not support dynamic client registration" |
+
+The HTTP endpoint requires GitHub Copilot OAuth which uses incompatible Dynamic Client Registration. The npm package with a Personal Access Token works reliably.
+
+**Correct GitHub MCP config for Claude Code:**
+```json
+"github": {
+  "type": "stdio",
+  "command": "cmd",
+  "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-github"],
+  "env": {
+    "GITHUB_PERSONAL_ACCESS_TOKEN": "your-pat-here"
+  }
+}
+```
+
+### Research Tracking Update
+| Date | Topic | Source | Finding |
+|------|-------|--------|---------|
+| 2026-03-03 | SessionStart prompt hook | Real-world debugging | Fails with custom ANTHROPIC_BASE_URL proxy |
+| 2026-03-03 | Stop command hooks | Real-world debugging | Can't communicate back to Claude; use prompt type instead |
+| 2026-03-03 | PreCompact prompt paths | Real-world debugging | Hardcoded paths silently fail for other projects |
+| 2026-03-03 | GitHub MCP HTTP endpoint | Real-world debugging | Confirmed: does not work with Claude Code, use npm package |
+| 2026-03-03 | v2.1.63 | Status bar | Current version as of 2026-03-03 |
+
+---
+
+## 2026-03-03 — Event-Driven Skill Injection (Skill Switchboard Pattern)
+
+### The Skill Gap Problem
+Static skill lists in CLAUDE.md or SessionStart hooks fail at scale because:
+- Context compaction drops older static lists to make room for active work
+- All skills loaded equally regardless of what's being worked on (irrelevant noise)
+- Developer must manually invoke skills at exactly the right time (cognitive load)
+
+**Source:** Rick Hightower / SpillwaveSolutions — "The End of Manual Agent Skill Invocation" (Medium, Feb 23, 2026). References a January 2026 Vercel study confirming agents only activate the right skills 79% of the time without deterministic injection.
+
+### The Skill Switchboard Solution
+A `PreToolUse` hook intercepts every `Edit`/`Write` event, reads the file path from stdin JSON, and injects relevant skill content into Claude's context before the tool executes. No slash commands required.
+
+**Architecture:**
+- `rules.json` — maps file extensions + directory glob patterns to skill files
+- `switchboard.ps1` — PowerShell engine: reads stdin, matches rules, outputs skill content
+- AND-logic matching: extension **and** directory pattern must both match
+- Priority field: higher number = injected first (100 = security, 50 = coding style)
+- Deduplication: same skill file never injected twice in one edit event
+- `max_lines` truncation: keeps large SKILL.md files from blowing context budget
+
+**Five activation patterns:**
+1. **File-based** — PreToolUse on Edit/Write (core pattern)
+2. **Intent-based** — UserPromptSubmit prompt matching natural language
+3. **Lifecycle** — PreCompact hook re-injects skill inventory (prevents amnesia)
+4. **Dynamic** — inject_command shell script inspects project state
+5. **Priority** — high-priority rules (security) injected before general rules
+
+**Real-world rules for C#/Angular stack:**
+- `.cs` in `**/Commands/**`, `**/Services/**`, `**/Controllers/**` → coding-style.md
+- `.ts/.html/.scss` in `**/components/**`, `**/features/**` → coding-style.md
+- `.cs` in `**/Auth/**`, `**/Identity/**` → security.md (priority 100)
+- `.json` in `**/workflows/**` → comfyui-character-gen SKILL.md
+- `.html` in `**/.agent/diagrams/**` → dashboard-creator SKILL.md
+
+**Repo:** SpillwaveSolutions/agent_rulez (supports Claude Code, OpenCode, Gemini CLI)
 
 ---
 

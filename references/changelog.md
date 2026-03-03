@@ -2,6 +2,42 @@
 
 > Tracks all updates to the claude-code-mastery skill and its knowledge base.
 
+## 2026-03-03 — v1.4.0 (Hook Architecture & Bug Fixes)
+
+### Bug Fixes
+- **Fixed GitHub MCP templates** in `settings-templates.md`: replaced broken `https://api.githubcopilot.com/mcp/` HTTP endpoint with correct `@modelcontextprotocol/server-github` npm + PAT config across all 4 template variants (Minimal, Standard, Full Stack, Frontend)
+- **Corrected 2026-02-09 knowledge-base entry**: `@modelcontextprotocol/server-github` is NOT deprecated for Claude Code users — the HTTP endpoint doesn't work, the npm package does
+- **Updated MCP context warning** in troubleshooting: the "20K token limit" is now largely obsolete thanks to MCP Tool Search (v2.1.x+)
+
+### New Hook Architecture Documentation
+- **Added `SessionStart:startup hook error` troubleshooting section** — cause, symptom, and fix for `type: "prompt"` hook failures with custom `ANTHROPIC_BASE_URL`
+- **Added Stop hook communication limitation** — documented that command hooks at Stop cannot communicate back to Claude; solution is `type: "prompt"` hooks
+- **Added global PreCompact path antipattern** — hardcoded project paths in global hooks silently fail for other projects
+- **Updated SKILL.md Pillar 4 hook events list** — added SessionStart, PreCompact; added agent and http hook types
+- **Added hook gotchas block** to SKILL.md with four critical rules
+
+### Knowledge Base
+- Added 2026-03-03 hook architecture entry (real-world debugging findings)
+- Updated current version to v2.1.63
+
+---
+
+## 2026-03-03 — v1.3.0 (Event-Driven Skill Injection)
+
+### New: Skill Switchboard Pattern (Pillar 6 extension)
+- **Added "Event-Driven Skill Injection" sub-section** to Pillar 6 (Skills and Plugins)
+- Documents the Skill Switchboard architecture: `rules.json` + `switchboard.ps1` + PreToolUse hook
+- Covers all five activation patterns (file-based, intent-based, lifecycle, dynamic, priority)
+- Includes complete `rules.json` schema with real C#/Angular examples
+- Includes `settings.json` wiring snippet
+- Documents PreCompact skill amnesia fix pattern
+- References Agent RuleZ (SpillwaveSolutions) as the upstream concept source
+
+### Knowledge Base
+- Added 2026-03-03 entry covering the Skill Gap problem, switchboard architecture, five activation patterns, and real-world rules for C#/Angular/ComfyUI stack
+
+---
+
 ## 2026-02-18 — v1.2.0 (Knowledge Base Update)
 
 ### Knowledge Base Updates

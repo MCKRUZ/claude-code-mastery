@@ -176,7 +176,7 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 **Recommended tiers:**
 
 **Tier 1 — Essential:**
-- **GitHub MCP** (`@modelcontextprotocol/server-github`) — Repos, PRs, issues, CI/CD (requires GitHub token)
+- **GitHub MCP** (`@modelcontextprotocol/server-github`) — Repos, PRs, issues, CI/CD. Use the npm package with a PAT. The `https://api.githubcopilot.com/mcp/` HTTP endpoint does NOT work with Claude Code (incompatible auth).
 - **Context7** (`@upstash/context7-mcp`) — Current library docs (solves hallucinated APIs)
 - **Sequential Thinking** (`@modelcontextprotocol/server-sequential-thinking`) — Better planning
 
@@ -270,9 +270,15 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 
 > **Important:** Use `$CLAUDE_FILE_PATH` (not `$file`) for the file path variable. Always include a `timeout` value. Avoid bash-style redirects like `2>/dev/null || true` — they can cause issues on Windows.
 
-**Hook events:** PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit, Stop, SubagentStop, Notification, Setup, TeammateIdle, TaskCompleted.
+**Hook events:** SessionStart, PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit, PreCompact, Stop, SubagentStop, Notification, Setup, TeammateIdle, TaskCompleted.
 
-**Hook types:** `command` (shell) and `prompt` (LLM-based evaluation using Haiku).
+**Hook types:** `command` (shell), `prompt` (LLM-based, runs via Haiku), `agent` (multi-turn with tool access), `http` (POST to endpoint).
+
+**Critical hook gotchas:**
+- `type: "prompt"` at **SessionStart** fails if `ANTHROPIC_BASE_URL` points to a custom proxy — use command-only hooks there
+- `type: "command"` at **Stop** can't communicate back to Claude (session is over) — use `type: "prompt"` for end-of-session Claude work
+- **PreCompact** prompt hooks: never hardcode project-specific paths — use the auto-memory path injected by Claude Code at session start
+- **Global hooks** (`~/.claude/settings.json`) run for all projects — keep paths and prompts project-agnostic
 
 ### Pillar 5: Agents and Subagents
 
@@ -372,6 +378,102 @@ Multi-agent orchestration: Team Lead + Teammates with shared task lists and peer
 ```
 
 **Key community plugins:** obra/superpowers (20+ battle-tested skills), wshobson/agents (preset workflows), anthropics/skills (official examples).
+
+#### Advanced: Event-Driven Skill Injection (Skill Switchboard)
+
+The default skill activation model requires manual slash-command invocation. After context compaction, skills are forgotten entirely. The **Skill Switchboard** pattern solves this by wiring a `PreToolUse` hook that reads the file being edited and injects the relevant skill automatically — zero manual invocation required.
+
+**Concept** (inspired by Agent RuleZ by SpillwaveSolutions):
+- Static skill lists = ignored after compaction
+- Event-driven injection = deterministic, always-on, zero cognitive load
+- AND-logic: file extension **+** directory pattern must both match
+
+**Setup (3 files):**
+
+**1. `~/.claude/hooks/skill-switchboard/rules.json`** — define when each skill fires:
+
+```json
+{
+  "rules": [
+    {
+      "name": "csharp-coding-standards",
+      "enabled": true,
+      "priority": 50,
+      "matchers": {
+        "extensions": [".cs"],
+        "directories": ["**/Commands/**", "**/Services/**", "**/Controllers/**"]
+      },
+      "inject_path": "~/.claude/rules/coding-style.md",
+      "max_lines": 120
+    },
+    {
+      "name": "angular-component-standards",
+      "enabled": true,
+      "priority": 50,
+      "matchers": {
+        "extensions": [".ts", ".html", ".scss"],
+        "directories": ["**/components/**", "**/features/**", "**/store/**"]
+      },
+      "inject_path": "~/.claude/rules/coding-style.md",
+      "max_lines": 120
+    },
+    {
+      "name": "security-sensitive",
+      "enabled": true,
+      "priority": 100,
+      "matchers": {
+        "extensions": [".cs"],
+        "directories": ["**/Auth/**", "**/Identity/**", "**/Security/**"]
+      },
+      "inject_path": "~/.claude/rules/security.md",
+      "max_lines": 80
+    }
+  ]
+}
+```
+
+**2. `~/.claude/hooks/skill-switchboard/switchboard.ps1`** — the engine (reads stdin JSON, matches rules, outputs skill content to Claude's context).
+
+**3. `~/.claude/settings.json`** — wire it as the first PreToolUse hook on `Edit|Write`:
+
+```json
+{
+  "matcher": "Edit|Write",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/<you>/.claude/hooks/skill-switchboard/switchboard.ps1\"",
+      "timeout": 8000
+    }
+  ]
+}
+```
+
+**Key design decisions:**
+- `priority` — higher number = injected first (security rules before style rules)
+- `max_lines` — truncates large SKILL.md files to keep context lean
+- Deduplication — same file injected once even if matched by multiple rules
+- Directory patterns support `**/segment/**` glob-style matching
+- Hook runs **before** the edit executes — Claude gets context at the right moment
+
+**Five activation patterns (from Agent RuleZ architecture):**
+
+| Pattern | Trigger | Claude Code Hook |
+|---------|---------|-----------------|
+| **File-based** | Edit/Write on matching extension + directory | `PreToolUse` command |
+| **Intent-based** | Natural language mentions migration/auth/etc. | `UserPromptSubmit` prompt |
+| **Lifecycle** | Pre-compaction (re-inject skills inventory) | `PreCompact` prompt |
+| **Dynamic** | Shell script inspects project state | `PreToolUse` inject_command |
+| **Priority** | Critical rules forced to top | `priority` field in rules.json |
+
+**PreCompact skill amnesia fix** — add to your existing PreCompact prompt hook:
+```
+Before compacting, output a brief "Active Skills Available" section listing which
+skills are configured in ~/.claude/hooks/skill-switchboard/rules.json so they
+survive compaction.
+```
+
+**Reference:** SpillwaveSolutions/agent_rulez on GitHub — comprehensive YAML-based policy engine for Claude Code, OpenCode, and Gemini CLI.
 
 ### Pillar 7: CI/CD and Automation
 

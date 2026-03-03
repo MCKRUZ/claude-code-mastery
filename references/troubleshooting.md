@@ -52,7 +52,7 @@ If Git Bash is installed to a non-default location, adjust the path accordingly.
 
 ### "Context fills up too fast"
 **Causes & Fixes:**
-1. **Too many MCP servers:** Each adds persistent tool definitions. Remove unused ones. Stay under 20K tokens of MCP tools.
+1. **Too many MCP servers:** Each adds persistent tool definitions. Remove unused ones. With MCP Tool Search enabled (v2.1.x+), this is much less of a concern — lazy loading reduces overhead 85-95%.
 2. **Large `@file` imports in CLAUDE.md:** Replace with pointers: "For details, see docs/X.md"
 3. **Not compacting:** Run `/compact focus on [current task]` at 70% usage
 4. **Reading too many files directly:** Use subagents for exploration
@@ -161,6 +161,44 @@ Error: Incompatible auth server: does not support dynamic client registration
 5. **Restart Claude Code**
 
 **Verify:** Run `claude mcp list` and the GitHub server should show as connected.
+
+### "SessionStart:startup hook error" in UI header
+
+**Symptom:** Claude Code shows `SessionStart:startup hook error` in the status bar even though the session starts normally.
+
+**Cause 1 — `type: "prompt"` hook with custom `ANTHROPIC_BASE_URL`:**
+If you have `ANTHROPIC_BASE_URL` set to a local proxy (LiteLLM, Ollama gateway, etc.) and a `type: "prompt"` hook in your SessionStart group, the prompt hook makes an LLM evaluation call through the proxy. If the proxy returns an unexpected format, the hook fails while the command hook succeeds — hence seeing both "success" and "error" indicators.
+
+**Fix:** Remove `type: "prompt"` hooks from SessionStart. Use only `type: "command"` hooks there. The command hook's stdout is injected into the session context as a system-reminder — no extra prompt hook is needed for context injection.
+
+**Cause 2 — Hook script file not found or crashes:**
+```powershell
+# Test the hook manually:
+pwsh -NoProfile -ExecutionPolicy Bypass -File "path/to/your/hook.ps1"
+```
+
+---
+
+### "Command Stop hook prints instructions but Claude doesn't act on them"
+
+**Cause:** `type: "command"` Stop hooks run after Claude's last response. Their stdout goes to the terminal — Claude is already done and cannot read or respond to it.
+
+**Fix:** For anything that requires Claude to take action at session end, use `type: "prompt"` Stop hooks instead:
+
+```json
+{
+  "hooks": [
+    {
+      "type": "prompt",
+      "prompt": "The session is ending. If meaningful patterns emerged, call mcp__cmem__save_lesson for each one."
+    }
+  ]
+}
+```
+
+Command hooks at Stop are appropriate for file operations (logging, tracing) that don't need Claude's involvement.
+
+---
 
 ### "Hooks not firing"
 **Check:**

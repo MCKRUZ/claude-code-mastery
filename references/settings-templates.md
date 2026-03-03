@@ -189,14 +189,20 @@
 
 ## MCP Server Configurations (`.mcp.json`)
 
+> **GitHub MCP note:** Use the `@modelcontextprotocol/server-github` npm package with a Personal Access Token. The `https://api.githubcopilot.com/mcp/` HTTP endpoint does **not** work with Claude Code (incompatible auth). See troubleshooting.md for details.
+
 ### Minimal (Most Projects)
 
 ```json
 {
   "mcpServers": {
     "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+      }
     }
   }
 }
@@ -208,8 +214,12 @@
 {
   "mcpServers": {
     "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+      }
     },
     "sentry": {
       "type": "http",
@@ -225,8 +235,12 @@
 {
   "mcpServers": {
     "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+      }
     },
     "sentry": {
       "type": "http",
@@ -249,8 +263,12 @@
 {
   "mcpServers": {
     "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+      }
     },
     "shadcn": {
       "type": "http",
