@@ -272,6 +272,42 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 
 **Hook events:** SessionStart, PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit, PreCompact, Stop, SubagentStop, Notification, Setup, TeammateIdle, TaskCompleted.
 
+#### Double Shot Latte (DSL) — Autonomous Continue Hook
+
+Eliminates unnecessary check-in interruptions during long autonomous sessions. When Claude stops, a Haiku-evaluated prompt decides: does it genuinely need human input, or is it stopping out of habit? If the latter, Claude continues autonomously.
+
+**Architecture (two Stop hooks in sequence):**
+
+```json
+"Stop": [
+  {
+    "hooks": [{
+      "type": "command",
+      "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/<you>/.claude/hooks/dsl/double-shot-latte.ps1\"",
+      "timeout": 8000
+    }]
+  },
+  {
+    "hooks": [{
+      "type": "prompt",
+      "prompt": "DOUBLE SHOT LATTE: Read C:/Users/<you>/.claude/hooks/dsl/decision.txt.\n\nIf it contains THROTTLED: stop and tell the user 'DSL throttled: paused after 3 consecutive stops in 5 minutes — what do you need?'\n\nIf it contains CONTINUE: honestly evaluate whether you genuinely need human input. If you stopped out of habit or caution rather than genuine need — continue working autonomously. Only stop if truly blocked."
+    }]
+  }
+]
+```
+
+**`double-shot-latte.ps1`** (see `hooks/dsl/double-shot-latte.ps1`):
+- Reads `~/.claude/hooks/dsl/state.json` for recent stop timestamps
+- Cleans entries older than 5 minutes
+- Checks if ≥ 3 stops remain (throttle condition)
+- Records current stop timestamp
+- Writes `CONTINUE` or `THROTTLED` to `decision.txt`
+- The prompt hook instructs Claude to read `decision.txt` and act accordingly
+
+**Throttle logic:** 3 stops within 5 minutes → THROTTLED → Claude stops and surfaces to user. This prevents infinite loops.
+
+**Key gotcha:** Place DSL as the **first two Stop hooks** — before session-end and save-lessons hooks. Claude still processes all Stop hooks in sequence; DSL's "continue" instruction takes effect after all hooks complete.
+
 **Hook types:** `command` (shell), `prompt` (LLM-based, runs via Haiku), `agent` (multi-turn with tool access), `http` (POST to endpoint).
 
 **Critical hook gotchas:**

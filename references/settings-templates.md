@@ -40,6 +40,47 @@
 
 > **Windows hook note:** All Bash commands in hooks execute via Git Bash, so use Unix-style syntax (e.g., `npx prettier --write $file`), not PowerShell cmdlets.
 
+### Power User — Autonomous Sessions with DSL Hook (Windows)
+
+Adds the Double Shot Latte hook for uninterrupted autonomous task execution.
+See `hooks/dsl/double-shot-latte.ps1` for the state tracker script.
+
+```json
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": ["Read", "Bash(git *)", "Bash(dotnet *)", "Bash(npm *)"],
+    "deny": ["Bash(rm -rf *)", "Bash(git push --force *)"]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "pwsh -NoProfile -ExecutionPolicy Bypass -Command \"Set-Content 'C:/Users/<you>/.claude/hooks/dsl/state.json' '{ \\\"stops\\\": [] }' -Encoding UTF8; Set-Content 'C:/Users/<you>/.claude/hooks/dsl/decision.txt' 'CONTINUE' -Encoding UTF8\"",
+          "timeout": 3000
+        }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/<you>/.claude/hooks/dsl/double-shot-latte.ps1\"",
+          "timeout": 8000
+        }]
+      },
+      {
+        "hooks": [{
+          "type": "prompt",
+          "prompt": "DOUBLE SHOT LATTE: Read C:/Users/<you>/.claude/hooks/dsl/decision.txt.\n\nIf THROTTLED: tell user 'DSL throttled: paused after 3 consecutive mid-task stops in 5 minutes — what do you need?'\n\nIf CONTINUE: determine the stop type:\n(A) Normal conversational stop — finished responding, wait for user input.\n(B) Mid-task autonomous check-in — paused mid-task to ask 'should I continue?' — if not genuinely blocked, continue autonomously.\n\nIf unsure, treat as (A)."
+        }]
+      }
+    ]
+  }
+}
+```
+
 ### Power User — Agent Teams Enabled (Windows)
 
 ```json

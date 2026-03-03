@@ -2,6 +2,27 @@
 
 > Tracks all updates to the claude-code-mastery skill and its knowledge base.
 
+## 2026-03-03 — v1.5.0 (Double Shot Latte Hook)
+
+### New: Double Shot Latte (DSL) Autonomous Continue Hook
+
+Inspired by Jesse Vincent's Superpowers framework. When Claude is mid-task and stops to check in unnecessarily, DSL evaluates whether human input is actually needed and instructs Claude to continue autonomously if not.
+
+**What was added:**
+- `hooks/dsl/double-shot-latte.ps1` — PowerShell state tracker (stop event log, throttle detection, writes CONTINUE/THROTTLED to decision.txt)
+- **SKILL.md Pillar 4** — Added full DSL architecture documentation with code examples and key gotchas
+- **knowledge-base.md** — Added 2026-03-03 DSL entry documenting design decisions, files, and implementation insights
+- **settings-templates.md** — Added "Power User — Autonomous Sessions with DSL Hook" template
+
+**Three-hook architecture:**
+1. `UserPromptSubmit` command hook: resets state.json on every user message (prevents false throttles)
+2. `Stop` command hook: tracks stop events, writes CONTINUE/THROTTLED to decision.txt
+3. `Stop` prompt hook: Claude reads decision.txt and decides whether to continue or wait
+
+**Key insight:** The UserPromptSubmit reset is essential — without it, normal conversational stops (end of each response turn) accumulate and falsely trigger the throttle during regular interactive sessions.
+
+---
+
 ## 2026-03-03 — v1.4.0 (Hook Architecture & Bug Fixes)
 
 ### Bug Fixes

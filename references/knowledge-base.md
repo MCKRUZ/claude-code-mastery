@@ -5,6 +5,50 @@
 
 ---
 
+## 2026-03-03 — Double Shot Latte (DSL) Hook — Autonomous Continue Pattern
+
+### Concept (from Jesse Vincent's Superpowers framework)
+
+When Claude is mid-task and stops to ask "should I continue?", the DSL hook evaluates autonomously whether human input is actually needed. If not, Claude continues without interrupting the user.
+
+### Implementation (Two Stop hooks + one UserPromptSubmit reset)
+
+**1. Command hook** (`double-shot-latte.ps1`):
+- Reads `~/.claude/hooks/dsl/state.json` for recent stop timestamps
+- Cleans entries older than 5 minutes, counts remainder
+- If count ≥ 3 → THROTTLED (safety valve against infinite loops)
+- Records current timestamp, writes CONTINUE or THROTTLED to `decision.txt`
+
+**2. Prompt hook** (reads decision.txt and instructs Claude):
+- If THROTTLED: tell user and stop
+- If CONTINUE: distinguish between (A) normal conversational stop → wait for user, or (B) mid-task autonomous check-in → continue if not genuinely blocked
+
+**3. UserPromptSubmit reset hook**:
+- On every user message: resets state.json to `{ "stops": [] }` and decision.txt to `CONTINUE`
+- This ensures the throttle counter only spans the current autonomous run, not the whole session
+
+### Key Design Decisions
+
+| Decision | Reason |
+|----------|--------|
+| Command hook writes state; prompt hook reads it | Command hooks can't communicate to Claude at Stop (stdout goes to terminal only); prompt hooks can |
+| Reset on UserPromptSubmit | Prevents false throttles from normal interactive conversation stops |
+| Type A/B stop distinction in prompt | Normal "end of turn" stops should not trigger autonomous continuation |
+| 3 stops / 5 min throttle | Safety valve — prevents Claude looping forever on a stuck task |
+| First in Stop array | DSL fires before session-end and save-lessons hooks |
+
+### Files
+- `~/.claude/hooks/dsl/double-shot-latte.ps1` — state tracker script
+- `~/.claude/hooks/dsl/state.json` — stop timestamp log (reset on each user message)
+- `~/.claude/hooks/dsl/decision.txt` — CONTINUE or THROTTLED flag
+
+### Research Tracking Update
+| Date | Topic | Source | Finding |
+|------|-------|--------|---------|
+| 2026-03-03 | DSL hook | Real-world implementation | Built from Superpowers concept; state tracker PS1 + prompt hook pair; UserPromptSubmit reset required to avoid false throttles |
+
+---
+
 ## 2026-03-03 — Hook Architecture Findings, v2.1.63, GitHub MCP Clarification
 
 ### Current Version: v2.1.63
