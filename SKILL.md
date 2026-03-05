@@ -394,6 +394,72 @@ Multi-agent orchestration: Team Lead + Teammates with shared task lists and peer
 
 **Best pattern: Adversarial (implement + review agents).** LLMs are significantly better in review mode than implementation mode.
 
+#### Wave Execution Orchestration
+
+The most powerful multi-agent pattern for complex implementation tasks. Solves **context rot** — the quality degradation that happens when a single agent accumulates hundreds of tool call results, failed attempts, and intermediate states alongside actual task context. The fix is architectural: keep orchestrators lean, give executors a fresh window.
+
+**The pattern:**
+
+```
+Orchestrator context budget: ~15%
+Each executor context budget: 100% fresh (separate Task invocation)
+
+Step 1: Analyze all plans, build dependency graph
+Step 2: Group into waves based on dependencies
+Step 3: Execute wave by wave (sequential), parallel within each wave
+
+Example:
+  Wave 1 (parallel): Plan A + Plan B   ← no dependencies
+  Wave 2 (parallel): Plan C + Plan D   ← C needs A, D needs B
+  Wave 3 (sequential): Plan E          ← needs C + D
+```
+
+**Key design rules:**
+
+- **Orchestrator stays lean.** Discovers plans, analyzes dependencies, spawns agents, collects results — no implementation work itself.
+- **Executors are disposable.** Each gets a fresh context window. They load only what they need for their plan.
+- **Vertical slices parallelize better than horizontal layers.**
+  - Good: `"Plan 01: User registration end-to-end (model → API → UI)"`
+  - Bad: `"Plan 01: All models / Plan 02: All APIs / Plan 03: All UI"`
+  - Horizontal plans create cascading dependencies (one long Wave 1 → Wave 2 → Wave 3). Vertical slices can all run in Wave 1.
+- **File conflict prevention.** Plans in the same wave must not touch the same files. If they do, move one to a later wave or merge the plans.
+
+**Plan-Checker Loop (quality gate before execution):**
+
+Before executing, verify plans actually achieve phase goals. Prevents expensive executor runs on under-specified plans.
+
+```
+1. Spawn planner → produces PLAN.md files
+2. Spawn plan-checker → verifies: "Do these plans achieve the phase's stated goals?"
+3. If FAIL: return feedback to planner → revise → recheck (max 3 iterations)
+4. On PASS: proceed to wave execution
+```
+
+**XML Task Format:**
+
+Structured XML is more reliably followed by Claude than prose instructions. Use for complex multi-task plans where precision matters:
+
+```xml
+<task type="auto">
+  <name>Create login endpoint</name>
+  <files>src/app/api/auth/login/route.ts</files>
+  <action>
+    Use jose for JWT (not jsonwebtoken — CommonJS issues).
+    Validate credentials against users table.
+    Return httpOnly cookie on success.
+  </action>
+  <verify>curl -X POST localhost:3000/api/auth/login returns 200 + Set-Cookie</verify>
+  <done>Valid credentials return cookie, invalid return 401</done>
+</task>
+```
+
+Fields:
+- `name` — task identifier
+- `files` — exact files to create/modify (reduces hallucinated paths)
+- `action` — precise instructions with specifics (library choices, constraints, anti-patterns)
+- `verify` — how to confirm the task worked (shell command, observable behavior)
+- `done` — definition of done (expected observable outcome)
+
 ### Pillar 6: Skills and Plugins
 
 **Skills** = reusable workflows with SKILL.md + optional scripts/templates/references.
@@ -662,3 +728,18 @@ The knowledge base follows an append-only log pattern — new findings are added
 **Research:** "Update knowledge" or "What's new in Claude Code?"
 
 Always start by understanding the user's current state before prescribing solutions.
+
+---
+
+## Reference Files
+
+| File | Contents |
+|------|---------|
+| `references/knowledge-base.md` | Append-only log of Claude Code discoveries and version changes |
+| `references/changelog.md` | What changed in this skill and when |
+| `references/settings-templates.md` | Production-ready settings.json templates |
+| `references/claude-md-templates.md` | CLAUDE.md templates for common project types |
+| `references/troubleshooting.md` | Common issues and fixes |
+| `references/rules-directory-pattern.md` | Deep dive on the `.claude/rules/` pattern |
+| `references/research-sources.md` | Where to look when researching Claude Code updates |
+| `references/spec-driven-development.md` | Goal-backward planning, project artifacts, UAT loop, parallel research team — for multi-session projects |

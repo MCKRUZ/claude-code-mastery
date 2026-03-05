@@ -2,6 +2,20 @@
 
 > Tracks all updates to the claude-code-mastery skill and its knowledge base.
 
+## 2026-03-03 — v1.6.0 (GSD Extraction: Wave Execution & Spec-Driven Development)
+
+### New: Wave Execution Orchestration (Pillar 5 addition)
+
+Extracted from analysis of the GSD (get-shit-done) system (23.9k stars). The most concrete multi-agent execution pattern in the community. Named and solved the "context rot" problem architecturally.
+
+**What was added:**
+- **SKILL.md Pillar 5** — New "Wave Execution Orchestration" subsection covering: wave pattern, orchestrator budget rule (15%), executor fresh context rule (100%), dependency-graph wave grouping, vertical vs. horizontal slice design principle, file conflict prevention, plan-checker loop, XML task format
+- **knowledge-base.md** — New 2026-03-03 entry: context rot definition, wave execution pattern, plan-checker loop, XML task format
+- **references/spec-driven-development.md** — New reference file: goal-backward planning, project artifact set (PROJECT.md etc.), user decision fidelity protocol (discuss → lock → honor), parallel research team pattern, brownfield codebase mapping, UAT verify loop, atomic git commits per task
+- **SKILL.md** — Added Reference Files table at the bottom linking to all reference files including the new spec-driven-development.md
+
+**Source:** GSD system at github.com/gsd-build/get-shit-done — analyzed for extractable patterns compatible with this skill's configuration-focused approach.
+
 ## 2026-03-03 — v1.5.0 (Double Shot Latte Hook)
 
 ### New: Double Shot Latte (DSL) Autonomous Continue Hook

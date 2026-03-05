@@ -5,6 +5,71 @@
 
 ---
 
+## 2026-03-03 — Context Rot, Wave Execution, and Spec-Driven Development Patterns
+
+### Context Rot (Named Problem)
+
+**Context rot** is quality degradation that occurs not just from hitting the context limit, but from the *accumulation of tool call noise* — hundreds of intermediate results, failed attempts, retried operations, and prior planning artifacts that crowd out working memory. Even at 60–70% context usage, quality degrades if the window is full of stale operational noise rather than clean task context.
+
+**Distinction from context limits:**
+- Context limit problem → compact or clear session
+- Context rot problem → architectural solution: keep orchestrators lean, give executors a fresh window
+
+**Source:** GSD (get-shit-done) — a widely-adopted Claude Code workflow system (23.9k GitHub stars, Dec 2025). Their "context rot" framing and wave execution solution is the most concrete solution to this problem in the community.
+
+### Wave Execution Pattern
+
+**Core idea:** Orchestrator stays at ~15% context budget. Each plan executor spawns as a fresh Task with 100% context budget.
+
+**How dependency-based waves work:**
+1. Analyze all plans → build dependency graph
+2. Group plans into waves: independent plans → same wave, dependent plans → later wave
+3. Execute waves sequentially, parallelize within each wave
+
+**Vertical slices vs. horizontal layers:**
+- Horizontal: "Plan 1: All models / Plan 2: All APIs / Plan 3: All UI" → cascading dependencies, one long sequential queue
+- Vertical: "Plan 1: User feature end-to-end / Plan 2: Orders feature end-to-end" → fully parallel Wave 1
+
+**File conflict rule:** Plans in the same wave must not touch the same files. Detect before execution; resolve by moving to later wave or merging plans.
+
+### Plan-Checker Loop (Pre-Execution Quality Gate)
+
+Before executing plans, spawn a checker agent to verify plans achieve phase goals (not just that they're internally consistent). Loop up to 3x with planner revision on failure. Prevents expensive executor runs on under-specified plans.
+
+```
+planner → PLAN.md files
+    ↓
+plan-checker → "Do these plans achieve the phase goal?"
+    ↓ FAIL: feedback → planner (revise) → loop
+    ↓ PASS (or 3 iterations): proceed to wave execution
+```
+
+### XML Task Format (Prompt Engineering)
+
+XML-structured task definitions are more reliably followed by Claude than prose. Each task element constrains a specific dimension of Claude's interpretation:
+
+```xml
+<task type="auto">
+  <name>Create login endpoint</name>
+  <files>src/app/api/auth/login/route.ts</files>
+  <action>Use jose for JWT (not jsonwebtoken — CommonJS issues). Validate credentials against users table. Return httpOnly cookie on success.</action>
+  <verify>curl -X POST localhost:3000/api/auth/login returns 200 + Set-Cookie</verify>
+  <done>Valid credentials return cookie, invalid return 401</done>
+</task>
+```
+
+Use when: multi-step plans with more than 3 tasks, when precision matters (specific library choices, anti-patterns to avoid), when the plan will be handed off to an executor subagent.
+
+### Research Tracking Update
+| Date | Topic | Source | Finding |
+|------|-------|--------|---------|
+| 2026-03-03 | Context Rot | GSD analysis | Named problem: tool noise degradation distinct from context limits; wave execution is the architectural solution |
+| 2026-03-03 | Wave Execution | GSD analysis | Orchestrator 15% budget; executors fresh 100%; dependency-graph-based wave grouping; vertical slices > horizontal layers |
+| 2026-03-03 | Plan-Checker Loop | GSD analysis | Pre-execution quality gate; max 3 revision iterations; prevents bad plans reaching expensive execution |
+| 2026-03-03 | XML Task Format | GSD analysis | Structured XML more reliably followed than prose; name/files/action/verify/done fields |
+
+---
+
 ## 2026-03-03 — Double Shot Latte (DSL) Hook — Autonomous Continue Pattern
 
 ### Concept (from Jesse Vincent's Superpowers framework)
