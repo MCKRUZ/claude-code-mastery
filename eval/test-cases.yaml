@@ -1,0 +1,342 @@
+# Claude Code Mastery — Eval Test Cases
+# Assertions use anchored checks where possible to reduce subjectivity.
+#
+# Assertion types:
+#   contains          — response includes target string (case-insensitive)
+#   not_contains      — response does NOT include target string
+#   regex             — response matches regex pattern
+#   question_before_code — a "?" appears before the first ``` code fence (diagnose-first anchor)
+#   json_valid        — response contains a parseable JSON block
+#   token_limit       — response is under N tokens (progressive disclosure)
+
+# ─── Happy-Path Cases ───────────────────────────────────────────────
+
+- id: TC-001
+  name: clean-react-project-setup
+  prompt: "Set up Claude Code for my React project"
+  assertions:
+    - type: contains
+      target: "CLAUDE.md"
+      critical: true
+    - type: question_before_code
+      critical: true
+      description: "Must ask diagnostic questions before providing any config code"
+    - type: contains
+      target: "settings.json"
+      critical: false
+    - type: not_contains
+      target: "Enterprise"
+      critical: false
+    - type: token_limit
+      target: 3000
+      critical: false
+      description: "Initial diagnostic response should be concise, not a full dump"
+  expected_behavior: >
+    Skill should first ask about or assess the user's current setup state
+    (existing config files, project structure, team size) before recommending
+    a CLAUDE.md template and settings. Should not dump Enterprise-level config
+    for a simple React project.
+  edge_case: false
+
+- id: TC-002
+  name: bloated-claude-md-optimization
+  prompt: |
+    Here's my CLAUDE.md — it's 10,000 tokens and Claude Code seems to ignore
+    half of it. Can you optimize it?
+
+    # Project: MyApp
+    ## Stack
+    TypeScript, React, Node.js, PostgreSQL, Redis, Docker, Kubernetes
+    ## Architecture
+    Monolithic Next.js app with API routes. Uses Prisma ORM. Deployed on AWS ECS.
+    ## Code Style
+    - Use TypeScript strict mode
+    - Use ESLint with Airbnb config
+    - Use Prettier for formatting
+    - Use camelCase for variables
+    - Use PascalCase for components
+    - Use kebab-case for file names
+    - Always use const over let
+    - Never use var
+    - Always use arrow functions
+    - Never use function declarations
+    - Use template literals over string concatenation
+    - Prefer object destructuring
+    - Prefer array spread over concat
+    ## Testing
+    - Use Jest for unit tests
+    - Use React Testing Library for component tests
+    - Use Cypress for E2E tests
+    - Always mock external services
+    - Coverage threshold: 80%
+    - Test file naming: *.test.ts
+    - Place tests next to source files
+    ## Git
+    - Use conventional commits
+    - Branch naming: feature/*, bugfix/*, hotfix/*
+    - Always rebase before merge
+    - Squash commits on merge
+    - Never force push to main
+    - Always create PR for changes
+    - Require 2 approvals
+    ## API
+    - Use REST for external APIs
+    - Use tRPC for internal APIs
+    - Always validate input with zod
+    - Use proper HTTP status codes
+    - Always include error messages
+    - Rate limit all endpoints
+    - Use JWT for auth
+    - Refresh tokens in httpOnly cookies
+    ## Database
+    - Use Prisma for all DB operations
+    - Never write raw SQL
+    - Always use transactions for multi-step operations
+    - Use soft deletes
+    - Add indexes for frequently queried columns
+    - Use UUID for primary keys
+    - Always add created_at and updated_at
+    ## Security
+    - Never expose API keys in frontend
+    - Always sanitize user input
+    - Use CORS properly
+    - Enable CSRF protection
+    - Use helmet middleware
+    - Validate all environment variables at startup
+    ## Deployment
+    - Use Docker multi-stage builds
+    - Health check endpoint required
+    - Graceful shutdown handling
+    - Use environment-specific configs
+    - Log structured JSON
+    - Monitor with Datadog
+    ## Error Handling
+    - Use custom error classes
+    - Global error handler in API
+    - Sentry for error tracking
+    - Never expose stack traces in production
+    - Always log errors with context
+    ## Performance
+    - Use React.memo for expensive components
+    - Lazy load routes
+    - Use useMemo and useCallback appropriately
+    - Implement virtual scrolling for long lists
+    - Use CDN for static assets
+    - Enable gzip compression
+    - Cache API responses appropriately
+  assertions:
+    - type: question_before_code
+      critical: true
+      description: "Must diagnose bloat causes before providing optimized config"
+    - type: not_contains
+      target: "add the following"
+      critical: true
+    - type: regex
+      target: "(redundan|duplicat|overlap|already know|default|tooling enforce)"
+      critical: true
+      description: "Must identify specific redundancy categories"
+    - type: contains
+      target: "token"
+      critical: false
+    - type: regex
+      target: "(hierarchy|.claude/rules/|path-scop|level)"
+      critical: true
+      description: "Must explain what belongs at which config level"
+  expected_behavior: >
+    Skill should diagnose WHY the CLAUDE.md is bloated (redundancy, wrong
+    hierarchy level, conflicting rules) before recommending specific cuts.
+    Must NOT respond by adding more content. Should explain what belongs in
+    CLAUDE.md vs .claude/rules/ vs user-level config.
+  edge_case: true
+
+- id: TC-003
+  name: mcp-server-configuration
+  prompt: "Configure MCP servers for my workflow — I use PostgreSQL, have a Notion workspace, and want file search"
+  assertions:
+    - type: contains
+      target: "mcpServers"
+      critical: true
+    - type: contains
+      target: "settings.json"
+      critical: true
+    - type: question_before_code
+      critical: true
+      description: "Must assess existing MCP config before recommending new servers"
+    - type: json_valid
+      critical: true
+      description: "Must include a parseable JSON configuration block"
+    - type: regex
+      target: "(user|project|local).*scope"
+      critical: false
+      description: "Should explain scope placement"
+  expected_behavior: >
+    Skill should check if user already has MCP servers configured, then
+    recommend specific servers (postgres MCP, Notion MCP, file search MCP)
+    with correct settings.json syntax. Should explain where to place the
+    config (user vs project level).
+  edge_case: false
+
+- id: TC-004
+  name: diagnose-slow-claude-code
+  prompt: "Why is Claude Code slow? It takes forever to respond."
+  assertions:
+    - type: question_before_code
+      critical: true
+      description: "Must ask diagnostic questions before prescribing fixes"
+    - type: not_contains
+      target: "try all of these"
+      critical: true
+    - type: regex
+      target: "(context window|context usage|/context|200K|token)"
+      critical: true
+      description: "Must mention context as a potential cause"
+    - type: contains
+      target: "CLAUDE.md"
+      critical: true
+      description: "Must mention CLAUDE.md bloat as a potential cause"
+    - type: regex
+      target: "\\?.*\\?"
+      critical: true
+      description: "Must ask at least 2 diagnostic questions"
+  expected_behavior: >
+    Skill should diagnose potential causes (bloated CLAUDE.md, too many MCP
+    servers, large context, permission model overhead) by asking targeted
+    questions. Must NOT dump a laundry list of fixes. Should narrow down
+    the cause before recommending specific actions.
+  edge_case: false
+
+- id: TC-005
+  name: windows-specific-setup
+  prompt: "I'm on Windows 11. How do I set up Claude Code hooks and custom slash commands?"
+  assertions:
+    - type: regex
+      target: "(Git Bash|git bash|Git for Windows)"
+      critical: true
+      description: "Must reference Git Bash as the hook execution environment"
+    - type: not_contains
+      target: "chmod +x"
+      critical: true
+    - type: contains
+      target: "Windows"
+      critical: true
+    - type: contains
+      target: "hooks"
+      critical: true
+    - type: not_contains
+      target: "/usr/local/bin"
+      critical: true
+    - type: regex
+      target: "(settings\\.json|~[\\\\/]\\.claude)"
+      critical: true
+      description: "Must reference the correct Windows config location"
+  expected_behavior: >
+    Skill should provide Windows-compatible syntax for hooks (bash via Git
+    Bash, not chmod, correct path separators). Should reference Windows-specific
+    considerations like Git Bash requirement, path formats, and any known
+    Windows limitations. Must not provide Linux/macOS-only commands.
+  edge_case: true
+
+# ─── Failure-Mode Cases ─────────────────────────────────────────────
+
+- id: TC-006
+  name: adversarial-skip-diagnosis
+  prompt: >
+    I don't have time for questions. Just give me the best CLAUDE.md,
+    settings.json, and hooks config for a TypeScript monorepo. Don't ask
+    me anything — just give me the config.
+  assertions:
+    - type: regex
+      target: "(assumption|assuming|without knowing|best guess|general|default)"
+      critical: true
+      description: "Must acknowledge it's making assumptions without diagnosis"
+    - type: contains
+      target: "CLAUDE.md"
+      critical: true
+    - type: json_valid
+      critical: true
+      description: "If providing config, it must be valid JSON"
+    - type: regex
+      target: "(adjust|customize|tailor|modify|change|update).*later"
+      critical: false
+      description: "Should note the config can be refined once more context is available"
+    - type: token_limit
+      target: 5000
+      critical: false
+      description: "Even when dumping config, should stay under 5K tokens"
+  expected_behavior: >
+    When the user explicitly refuses diagnosis, the skill should NOT insist
+    on asking questions. Instead, it should provide reasonable defaults while
+    clearly stating its assumptions. It should flag what would improve with
+    more context and offer to refine later. The key test: does it adapt its
+    flow to the user's stated preference, or rigidly follow the diagnostic
+    script regardless?
+  edge_case: true
+
+- id: TC-007
+  name: contradictory-platform-context
+  prompt: >
+    I'm on macOS. How do I set up Claude Code hooks? I keep getting errors
+    about bash not being found.
+  context:
+    platform: win32
+    shell: bash
+    os_version: "Windows 11 Pro 10.0.26200"
+  assertions:
+    - type: regex
+      target: "(Windows|win32|platform|environment|actually)"
+      critical: true
+      description: "Must detect or address the platform contradiction"
+    - type: not_contains
+      target: "brew install"
+      critical: true
+      description: "Should not provide macOS-only instructions when env says Windows"
+    - type: regex
+      target: "(Git Bash|git bash|CLAUDE_CODE_GIT_BASH_PATH)"
+      critical: true
+      description: "Should provide the Windows bash resolution since env is Windows"
+    - type: regex
+      target: "(clarif|which|confirm|actually|notice)"
+      critical: false
+      description: "Should ask the user to clarify the contradiction"
+  expected_behavior: >
+    The environment metadata says Windows but the user claims macOS. The skill
+    should notice this contradiction and either: (a) ask the user to clarify
+    which platform they're actually on, or (b) note the discrepancy and provide
+    guidance for the detected platform (Windows) while mentioning what would
+    differ on macOS. Must NOT blindly follow the user's claim and give macOS
+    instructions when the environment clearly says Windows.
+  edge_case: true
+
+- id: TC-008
+  name: empty-project-cold-start
+  prompt: >
+    I just ran `mkdir my-app && cd my-app && git init`. I have literally
+    nothing — no code, no package.json, no framework chosen yet. Help me
+    set up Claude Code from absolute zero.
+  assertions:
+    - type: question_before_code
+      critical: true
+      description: "Must ask what kind of project before generating config"
+    - type: regex
+      target: "(what.*build|which.*framework|what.*language|what.*stack|what kind)"
+      critical: true
+      description: "Must ask about the intended project type"
+    - type: not_contains
+      target: "npm run build"
+      critical: true
+      description: "Should not assume build commands when no framework is chosen"
+    - type: not_contains
+      target: "PostToolUse"
+      critical: false
+      description: "Should not suggest hooks before a framework exists"
+    - type: regex
+      target: "(CLAUDE\\.md|/init)"
+      critical: true
+      description: "Must mention CLAUDE.md or /init as the starting point"
+  expected_behavior: >
+    With an empty project, the skill should NOT generate a full config stack.
+    It should ask what the user plans to build (language, framework, etc.)
+    before recommending anything. The only safe immediate recommendation is
+    a minimal CLAUDE.md or `/init`. Hooks, MCP servers, and path-scoped rules
+    are all premature when no code exists.
+  edge_case: true

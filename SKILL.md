@@ -1,12 +1,14 @@
 ---
 name: claude-code-mastery
 description: >
-  The definitive Claude Code setup, configuration, and mastery skill. Use when setting up Claude Code 
-  for a new project, optimizing an existing setup, configuring CLAUDE.md files, MCP servers, hooks, 
-  permissions, agent teams, skills, plugins, or CI/CD integration. Triggers on: "set up Claude Code", 
-  "configure CLAUDE.md", "optimize my Claude Code setup", "MCP server", "agent teams", "Claude Code 
-  hooks", "Claude Code permissions", "Claude Code CI/CD", "Claude Code best practices", "improve my 
-  Claude Code workflow", or any question about Claude Code configuration and architecture.
+  The definitive Claude Code setup, configuration, and mastery skill. Use when setting up Claude Code
+  for a new project, optimizing an existing setup, configuring CLAUDE.md files, MCP servers, hooks,
+  permissions, agent teams, skills, plugins, skill development, eval frameworks, or CI/CD integration.
+  Triggers on: "set up Claude Code", "configure CLAUDE.md", "optimize my Claude Code setup", "MCP server",
+  "agent teams", "Claude Code hooks", "Claude Code permissions", "Claude Code CI/CD", "Claude Code best
+  practices", "improve my Claude Code workflow", "skill development", "eval framework", "build a skill",
+  or any question about Claude Code configuration and architecture. Does NOT trigger on general coding
+  tasks, code review, debugging, or tool configuration unrelated to Claude Code.
 ---
 
 # Claude Code Mastery Skill

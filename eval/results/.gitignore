@@ -1,0 +1,5 @@
+# Eval results may contain secrets from real config files.
+# Never commit actual run output.
+*
+!.gitignore
+!.gitkeep

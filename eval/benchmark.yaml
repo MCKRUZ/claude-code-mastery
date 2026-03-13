@@ -1,0 +1,40 @@
+skill_type: encoded_preference
+baseline_expected_score: "35%"
+with_skill_target_score: "85%"
+token_overhead_acceptable: "15%"
+manual_correction_reduction: "70%"
+
+comparison_criteria:
+  - criterion: "Diagnoses user state before prescribing solutions"
+    weight: 0.25
+    assertion_types: ["question_before_code"]
+    anchor: "A '?' character must appear before the first code fence (```) in the response"
+
+  - criterion: "Correct configuration hierarchy (Enterprise > User > Project > Local)"
+    weight: 0.20
+    assertion_types: ["regex", "contains"]
+    anchor: "Response references .claude/rules/, hierarchy, or scope placement"
+
+  - criterion: "Accurate CLI commands and valid config syntax"
+    weight: 0.20
+    assertion_types: ["json_valid", "contains"]
+    anchor: "All JSON blocks parse without error; settings.json and mcpServers referenced correctly"
+
+  - criterion: "Progressive disclosure — right amount for user's level"
+    weight: 0.15
+    assertion_types: ["token_limit"]
+    anchor: "Initial diagnostic responses under 3K tokens; full config responses under 5K tokens"
+
+  - criterion: "Platform-aware syntax (Windows vs macOS vs Linux)"
+    weight: 0.10
+    assertion_types: ["not_contains", "regex"]
+    anchor: "No chmod +x or /usr/local/bin on Windows; Git Bash referenced for Windows hooks"
+
+  - criterion: "Graceful handling of adversarial or ambiguous input"
+    weight: 0.10
+    assertion_types: ["regex", "not_contains"]
+    anchor: "Acknowledges assumptions when diagnosis is refused; detects platform contradictions"
+
+test_case_count: 8
+happy_path_cases: 5
+failure_mode_cases: 3

@@ -1,0 +1,75 @@
+optimized_description: >
+  Claude Code setup, configuration, CLAUDE.md authoring, settings.json,
+  hooks, MCP servers, permissions, skill development, eval frameworks,
+  agent teams, and workflow optimization.
+
+should_trigger:
+  - query: "set up Claude Code"
+    expected: true
+    reason: "Direct setup request — core skill domain"
+  - query: "optimize my CLAUDE.md"
+    expected: true
+    reason: "CLAUDE.md authoring is primary skill function"
+  - query: "configure hooks"
+    expected: true
+    reason: "Hook configuration is a core capability"
+  - query: "MCP server setup"
+    expected: true
+    reason: "MCP configuration is explicitly covered"
+  - query: "Claude Code permissions"
+    expected: true
+    reason: "Permission model is part of mastery guidance"
+  - query: "skill development"
+    expected: true
+    reason: "Building custom skills is a mastery topic"
+  - query: "eval framework"
+    expected: true
+    reason: "Eval setup is part of the skill ecosystem"
+  - query: "agent teams"
+    expected: true
+    reason: "Agent orchestration is a Claude Code feature"
+  - query: "improve my Claude Code workflow"
+    expected: true
+    reason: "Workflow optimization is the skill's core purpose"
+  - query: "Claude Code CI/CD"
+    expected: true
+    reason: "CI/CD integration with Claude Code is a mastery topic"
+
+should_not_trigger:
+  - query: "write a Python function"
+    expected: false
+    reason: "General coding — not Claude Code configuration"
+  - query: "fix this bug"
+    expected: false
+    reason: "Debugging task — no Claude Code setup involved"
+  - query: "review my PR"
+    expected: false
+    reason: "Code review — uses Claude Code but doesn't configure it"
+  - query: "explain this code"
+    expected: false
+    reason: "Code explanation — general Claude capability"
+  - query: "deploy to AWS"
+    expected: false
+    reason: "Infrastructure deployment — unrelated domain"
+  - query: "set up Docker"
+    expected: false
+    reason: "Docker setup — different tool entirely"
+  - query: "configure nginx"
+    expected: false
+    reason: "Web server config — not Claude Code"
+  - query: "write tests"
+    expected: false
+    reason: "Test authoring — general dev task"
+  - query: "help me with git rebase"
+    expected: false
+    reason: "Git operations — not Claude Code configuration"
+  - query: "optimize my SQL query"
+    expected: false
+    reason: "Database optimization — unrelated domain"
+
+# ─── Trigger eval runner integration ────────────────────────────────
+# These tests are validated by run-eval.sh when invoked with --triggers flag.
+# Each query is sent to Claude in headless mode and the response is checked
+# for skill activation indicators (references to CLAUDE.md hierarchy,
+# settings.json, hooks, MCP, etc. for should_trigger; absence of these
+# for should_not_trigger).
