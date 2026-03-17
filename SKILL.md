@@ -129,12 +129,13 @@ monorepo/
 
 ### Pillar 2: Context Management
 
-Claude Code operates within a 200K token context window (1M in beta for Opus 4.6).
+Claude Code operates within a **1M token context window** by default for Opus 4.6 on Max, Team, and Enterprise plans (as of v2.1.75, March 13 2026). Output tokens expanded to **64K default / 128K upper bound** (v2.1.77).
 
 **Key strategies:**
 
-- **Monitor at 70%.** Don't wait for auto-compaction (75–92%). Run `/context` periodically.
+- **Monitor at 70%.** Don't wait for auto-compaction (75–92%). Run `/context` periodically — it now gives actionable suggestions (identifies context-heavy tools, memory bloat, capacity warnings).
 - **Compact with directives.** `/compact focus on the API changes` preserves specific context.
+- **PostCompact context renewal.** Use the `PostCompact` hook (v2.1.76) to re-inject critical instructions after compaction. Community pattern: a prompt hook that reminds Claude of active skills, project rules, and task state that may have been lost.
 - **Add Compact Instructions to CLAUDE.md:**
   ```markdown
   ## Compact Instructions
@@ -145,9 +146,10 @@ Claude Code operates within a 200K token context window (1M in beta for Opus 4.6
   ```
 - **Use subagents for exploration.** Instead of reading 15 files in main session, spawn a subagent: "use a subagent to investigate how authentication handles token refresh."
 - **Use `@file` strategically.** Direct file insertion avoids search overhead, but only reference what you need.
-- **MCP Tool Search (lazy loading):** As of January 2026, Claude Code auto-enables lazy loading when MCP tool definitions exceed 10K tokens. Instead of loading all schemas upfront (~77K tokens), it loads a search index (~8.7K tokens) and fetches 3-5 tools on demand. This reduces the old context penalty by 85-95%.
+- **MCP Tool Search (lazy loading):** Claude Code auto-enables lazy loading when MCP tool definitions exceed 10K tokens. Instead of loading all schemas upfront (~77K tokens), it loads a search index (~8.7K tokens) and fetches 3-5 tools on demand. This reduces the old context penalty by 85-95%.
 - **CLI tools still have zero overhead.** Prefer them for simple tasks. But the old "20K token MCP limit" rule is now largely obsolete thanks to Tool Search.
 - **Rule of thumb (updated):** With Tool Search enabled, you can run many MCP servers freely. Without it (older versions), >20K tokens of MCP definitions will cripple Claude.
+- **Effort levels.** Use `/effort` to adjust model effort (low/medium/high). Use "ultrathink" keyword in prompts for one-shot high-effort analysis.
 
 ### Pillar 3: MCP Server Stack
 
@@ -192,6 +194,11 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 
 **Tier 3 — Situational:**
 - Brave Search, Docker MCP, Figma, Linear/Jira, Notion/Slack, Firecrawl
+- **GWS** (`@googleworkspace/cli`) — Google Workspace: 50+ APIs (Gmail, Drive, Calendar, Sheets). Ships with MCP server: `gws mcp -s drive,gmail,calendar,sheets`
+
+**MCP Elicitation (v2.1.76):** MCP servers can now request structured input mid-task via interactive dialogs (form fields or browser URLs). New hooks `Elicitation` and `ElicitationResult` allow intercepting or overriding these requests.
+
+**Native MCP management:** Use `/mcp` command (v2.1.70) to add/remove/configure MCP servers within a session — no manual config file editing required.
 
 **Project-level `.mcp.json` (commit to git):**
 
@@ -272,7 +279,12 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 
 > **Important:** Use `$CLAUDE_FILE_PATH` (not `$file`) for the file path variable. Always include a `timeout` value. Avoid bash-style redirects like `2>/dev/null || true` — they can cause issues on Windows.
 
-**Hook events:** SessionStart, PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit, PreCompact, Stop, SubagentStop, Notification, Setup, TeammateIdle, TaskCompleted.
+**Hook events:** SessionStart, PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, UserPromptSubmit, PreCompact, **PostCompact** (v2.1.76), **InstructionsLoaded** (v2.1.69), **Elicitation** (v2.1.76), **ElicitationResult** (v2.1.76), Stop, SubagentStop, Notification, Setup, TeammateIdle, TaskCompleted.
+
+**New hooks explained:**
+- `InstructionsLoaded` — fires when CLAUDE.md or `.claude/rules/*.md` files are loaded. Enables skill activation patterns (e.g., inject additional context when specific rules load).
+- `PostCompact` — fires after compaction completes. Use for context renewal: re-inject critical instructions, skill inventories, or project state that may be lost during compaction.
+- `Elicitation` / `ElicitationResult` — intercept/override MCP server requests for structured user input.
 
 #### Double Shot Latte (DSL) — Autonomous Continue Hook
 
@@ -396,6 +408,15 @@ Multi-agent orchestration: Team Lead + Teammates with shared task lists and peer
 
 **Best pattern: Adversarial (implement + review agents).** LLMs are significantly better in review mode than implementation mode.
 
+#### Code Review (March 2026)
+
+Anthropic launched **Code Review** as a multi-agent PR review capability:
+- Multi-agent system that analyzes PRs in parallel, leaving comments directly on GitHub
+- Research preview for Team and Enterprise customers
+- ~$15-25 per review, ~20 minute completion time
+- 54% of PRs receive substantive comments (up from 16% with older approaches)
+- Not a skill to install — it's a built-in Claude Code capability
+
 #### Wave Execution Orchestration
 
 The most powerful multi-agent pattern for complex implementation tasks. Solves **context rot** — the quality degradation that happens when a single agent accumulates hundreds of tool call results, failed attempts, and intermediate states alongside actual task context. The fix is architectural: keep orchestrators lean, give executors a fresh window.
@@ -473,6 +494,30 @@ Fields:
 - `.claude/skills/` — Project-level
 - Plugin `skills/` directory — Per plugin
 
+**`${CLAUDE_SKILL_DIR}` variable (v2.1.69):** Skills can self-reference their own directory in SKILL.md content. Critical for skills with reference files, templates, or scripts. Example: `See ${CLAUDE_SKILL_DIR}/references/color-palette.md`.
+
+**Universal SKILL.md format:** The same skill files work across Claude Code, Cursor, Gemini CLI, Codex CLI, Antigravity IDE, and 33+ other agents. Write once, use everywhere.
+
+**Skill installation (standardized):**
+
+```powershell
+# Official Anthropic skills
+npx skills add anthropics/claude-code --skill frontend-design
+
+# Third-party skills (by GitHub repo)
+npx skills add browser-use/claude-skill
+npx skills add coleam00/excalidraw-diagram-skill --skill excalidraw-diagram
+
+# Antigravity Awesome Skills (1,234+ skills, one command)
+npx antigravity-awesome-skills --claude
+
+# List installed skills
+npx skills list
+
+# Reload after adding skills (no restart needed)
+/reload-plugins
+```
+
 **Plugin management:**
 
 ```
@@ -482,6 +527,21 @@ Fields:
 ```
 
 **Key community plugins:** obra/superpowers (20+ battle-tested skills), wshobson/agents (preset workflows), anthropics/skills (official examples).
+
+**Antigravity Awesome Skills** (22K+ stars, 3.8K+ forks): The largest cross-compatible skill collection. 1,234+ skills organized by category with role-based bundles (Web Wizard, Security Engineer, Essentials). Key starter skills: `@brainstorming`, `@architecture`, `@debugging-strategies`, `@api-design-principles`, `@security-auditor`, `@create-pr`.
+
+**Skill discovery sites:** [aitmpl.com/skills](https://www.aitmpl.com/skills), [skills.sh](https://skills.sh) — updated daily with new skills across the ecosystem.
+
+**Notable skills worth tracking:**
+
+| Skill | What It Does |
+|-------|-------------|
+| **Frontend Design** (277K+ installs) | Breaks "distributional convergence" — bold design instead of generic AI aesthetic |
+| **Browser Use** | Live browser automation — navigate, click, fill forms, screenshot |
+| **Remotion** | React-based programmatic video creation (demos, explainers) |
+| **Shannon** | Autonomous AI pen testing — 96% exploit success rate, 50+ vulnerability types |
+| **Excalidraw** | Architecture diagrams from natural language with self-validation rendering loop |
+| **Valyu** | Real-time search across 36+ data sources (SEC, PubMed, FRED, patents) |
 
 #### Advanced: Event-Driven Skill Injection (Skill Switchboard)
 
@@ -629,6 +689,22 @@ foreach ($feature in $features) {
 
 **claude-squad** (5.6k stars): TUI for managing multiple sessions with git worktrees. Note: requires tmux (Linux-only). On Windows, use the PowerShell worktree approach above or the Claude Desktop app for parallel sessions.
 
+**`/loop` for recurring tasks (v2.1.71):**
+
+```powershell
+# Run a prompt every 5 minutes
+/loop 5m check the deploy status
+
+# Run a slash command on interval (default: 10m)
+/loop /babysit-prs
+```
+
+Uses CronCreate/CronDelete/CronList scheduling tools. Jobs are session-scoped (gone when Claude exits) and auto-expire after 3 days. Disable with `CLAUDE_CODE_DISABLE_CRON` env var.
+
+**Worktree improvements:**
+- `ExitWorktree` tool (v2.1.72): leave worktree sessions mid-conversation (keep or remove)
+- `worktree.sparsePaths` setting (v2.1.76): selective directory checkout for monorepos — only clone relevant directories into the worktree
+
 ---
 
 ## Windows Native Setup (PowerShell)
@@ -677,7 +753,8 @@ claude doctor
 
 - **Config location:** `~/.claude/settings.json` in your Windows home directory (`C:\Users\<you>\.claude\`)
 - **Updates:** Native installer auto-updates. WinGet requires `winget upgrade Anthropic.ClaudeCode` manually.
-- **Image paste limitation:** `Win+Shift+S` clipboard paste (Ctrl+V) doesn't work in v2.1.34. Use file-based image sharing instead.
+- **Image paste limitation:** `Win+Shift+S` clipboard paste (Ctrl+V) doesn't work. Use file-based image sharing instead.
+- **Managed settings path (BREAKING v2.1.74):** Enterprise managed settings moved from `C:\ProgramData\ClaudeCode\managed-settings.json` to `C:\Program Files\ClaudeCode\managed-settings.json`. The old fallback path was removed.
 - **VS Code integration:** Install the Claude Code extension. If it can't find Git Bash, set `CLAUDE_CODE_GIT_BASH_PATH` as a system env var and restart VS Code.
 - **Hooks use Git Bash:** All hook commands in settings.json are executed via Git Bash, so use Unix-style commands (not PowerShell cmdlets) in hooks.
 - **Windows stability fixes (v2.1.27-2.1.34):** Fixed .bashrc handling, console window flashing, OAuth token expiration, proxy settings, bash sandbox errors, Japanese IME support.
@@ -690,14 +767,20 @@ claude doctor
 |---------|------------|
 | `/compact` | Context above 70% |
 | `/clear` | Between unrelated tasks |
-| `/context` | Inspect token usage |
+| `/context` | Inspect token usage (now gives actionable suggestions) |
 | `/cost` | Check session costs |
 | `/init` | New project starter CLAUDE.md |
 | `/model` | Switch Sonnet/Opus/Haiku |
+| `/effort` | Adjust effort level (low/medium/high) |
 | `/resume` | Return to previous session |
-| `/plan` | Toggle read-only mode |
+| `/plan` | Toggle read-only mode (accepts optional description) |
+| `/loop` | Recurring task scheduling (e.g., `/loop 5m check deploy`) |
+| `/mcp` | Manage MCP servers within session |
+| `/branch` | Fork conversation (was `/fork`) |
+| `/color` | Customize session prompt-bar color |
 | `/debug` | Ask Claude to diagnose the current session |
 | `/rename` | Rename session (auto-generates name if none given) |
+| `/reload-plugins` | Activate plugin/skill changes without restart |
 | `Shift+Tab` | Cycle permission modes |
 | `Escape` | Stop current operation |
 | `@file` | Reference file in prompt |

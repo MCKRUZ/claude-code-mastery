@@ -1,7 +1,150 @@
 # Claude Code Knowledge Base
 
-> **Last updated:** 2026-03-03
+> **Last updated:** 2026-03-17
 > **Format:** Append-only log. New entries go at the top with dates. Never delete old entries.
+
+---
+
+## 2026-03-17 — Massive Release Sprint (v2.1.68–v2.1.77), Skills Ecosystem Maturity, Article Analysis
+
+### Version History: v2.1.68 through v2.1.77
+
+| Version | Date | Key Changes |
+|---------|------|-------------|
+| **v2.1.77** | Mar 17 | 64K default output tokens (128K upper bound), `allowRead` sandbox setting, `/fork` renamed to `/branch`, skill character budget scales with context (2%), 45% faster `--resume` |
+| **v2.1.76** | Mar 14 | **MCP elicitation** (servers request structured input mid-task), `Elicitation`/`ElicitationResult` hooks, `PostCompact` hook, `/effort` command, `-n`/`--name` flag, `worktree.sparsePaths` for monorepos, auto-compaction retry limit (3 failures) |
+| **v2.1.75** | Mar 13 | **1M context window now DEFAULT** for Opus 4.6 (Max/Team/Enterprise), `/color` command, memory files include last-modified timestamps, permission prompts show hook source |
+| **v2.1.74** | Mar 12 | `/context` command gives actionable suggestions, `autoMemoryDirectory` setting, **BREAKING: removed deprecated Windows managed settings fallback** at `C:\ProgramData\ClaudeCode\managed-settings.json` |
+| **v2.1.73** | Mar 12 | `modelOverrides` setting (map model picker to custom provider IDs), Bedrock inference profile ARN support, **`/output-style` deprecated** (use `/config`) |
+| **v2.1.72** | Mar 10 | `ExitWorktree` tool, `w` key in `/copy` writes to file, `/plan` accepts description, effort levels simplified (low/medium/high), ~510KB bundle size reduction |
+| **v2.1.71** | Mar 7 | **`/loop` command** for recurring prompts at intervals, CronCreate/CronDelete/CronList scheduling tools, `voice:pushToTalk` rebindable keybinding |
+| **v2.1.70** | Mar 6 | VS Code session visuals, full markdown plan document view, native MCP server management via `/mcp`, 74% reduction in prompt re-renders, 426KB startup memory reduction |
+| **v2.1.69** | Mar 5 | `/claude-api` skill, voice STT expanded to 20 languages, **`${CLAUDE_SKILL_DIR}` variable**, **`InstructionsLoaded` hook**, `/reload-plugins`, `includeGitInstructions` setting, security: nested skills no longer load from gitignored dirs |
+| **v2.1.68** | Mar 4 | **Opus 4.6 now default model** with "medium" effort, "ultrathink" keyword re-introduced, **Opus 4 and 4.1 removed from API** |
+
+### New Hooks (since v2.1.63)
+
+| Hook | Version | Purpose |
+|------|---------|---------|
+| `InstructionsLoaded` | v2.1.69 | Fires when CLAUDE.md/.claude/rules/*.md are loaded — enables skill activation on config load |
+| `PostCompact` | v2.1.76 | Fires after compaction completes — community uses for context renewal (re-injecting critical instructions) |
+| `Elicitation` | v2.1.76 | Intercept MCP elicitation requests (MCP servers requesting structured input mid-task) |
+| `ElicitationResult` | v2.1.76 | Override elicitation responses before they reach the MCP server |
+
+### New Slash Commands (since v2.1.63)
+
+| Command | Version | Purpose |
+|---------|---------|---------|
+| `/loop` | v2.1.71 | Recurring task scheduling (e.g., `/loop 5m check the deploy`) |
+| `/mcp` | v2.1.70 | Native MCP server management (add/remove/configure within session) |
+| `/effort` | v2.1.76 | Adjust model effort level (low/medium/high) |
+| `/color` | v2.1.75 | Customize session prompt-bar color |
+| `/branch` | v2.1.77 | Fork conversation (renamed from `/fork`, backward-compatible alias kept) |
+| `/reload-plugins` | v2.1.69 | Activate plugin/skill changes without restart |
+| `/claude-api` | v2.1.69 | API/SDK development skill |
+
+### Breaking Changes (since v2.1.63)
+
+1. **Opus 4 and 4.1 removed** from Claude model selector and Claude Code (v2.1.68) — users auto-migrated to Opus 4.6
+2. **`/output-style` deprecated** — use `/config` instead (v2.1.73)
+3. **Windows managed settings fallback removed** at `C:\ProgramData\ClaudeCode\managed-settings.json` — must use `C:\Program Files\ClaudeCode\managed-settings.json` (v2.1.74)
+4. **`/fork` renamed to `/branch`** — backward-compatible alias maintained (v2.1.77)
+
+### MCP Elicitation (Major Feature — v2.1.76)
+
+MCP servers can now request structured input mid-task via interactive dialogs. This means:
+- An MCP server can pause execution and ask the user for additional information
+- Dialogs can be form fields or browser URLs
+- New hooks (`Elicitation`, `ElicitationResult`) allow intercepting/overriding these requests
+- This is the biggest MCP protocol change since Tool Search
+
+### Code Review Launch (March 9, 2026)
+
+Anthropic launched **Code Review** as a new Claude Code capability:
+- Multi-agent system that analyzes PRs in parallel
+- Leaves comments directly on GitHub pull requests
+- Research preview for **Team and Enterprise** customers
+- Typical cost: $15-$25 per review, ~20 minute completion time
+- 54% of PRs receive substantive comments (up from 16% with older approaches)
+
+### 1M Context Window Now Default
+
+As of v2.1.75 (March 13), Opus 4.6 has a **1M context window by default** for Max, Team, and Enterprise plans. This is no longer a beta flag — it's the standard.
+
+### Output Token Expansion
+
+As of v2.1.77 (March 17):
+- **Default** output tokens for Opus 4.6: **64K** (was 32K)
+- **Upper bound**: **128K** for both Opus 4.6 and Sonnet 4.6
+- Skill character budget now scales with context window (2% of context)
+
+### Skills Ecosystem Maturity (from article analysis + research)
+
+**`${CLAUDE_SKILL_DIR}` variable** (v2.1.69): Skills can now self-reference their own directory in SKILL.md content — critical for skills that include reference files, templates, or scripts relative to their own location.
+
+**Universal SKILL.md format**: The same SKILL.md files now work across Claude Code, Cursor, Gemini CLI, Codex CLI, Antigravity IDE, and 33+ other agents. This is the "Agent Skills open standard" — one skill file, many agents.
+
+**`npx skills` ecosystem (v7.3.0)**:
+- Standardized skill installation: `npx skills add <org>/<repo> --skill <name>`
+- `npx skills list` to see installed skills
+- Works across all compatible agents
+- 277K+ installs on frontend-design alone
+
+**Antigravity Awesome Skills** (22K+ GitHub stars, 3.8K+ forks):
+- 1,234+ curated agentic skills in a single library
+- Install all at once: `npx antigravity-awesome-skills --claude`
+- Role-based bundles: Web Wizard, Security Engineer, Essentials
+- Key starter skills: `@brainstorming`, `@architecture`, `@debugging-strategies`, `@api-design-principles`, `@security-auditor`, `@create-pr`, `@doc-coauthoring`
+
+**Skill discovery sites**:
+- https://www.aitmpl.com/skills — skill marketplace/directory
+- skills.sh — daily skill updates and discoveries
+
+### Notable Third-Party Skills Worth Tracking
+
+From the "10 Must-Have Skills" article (unicodeveloper, March 9, 2026):
+
+| Skill | Install | What It Does |
+|-------|---------|-------------|
+| **Frontend Design** | `npx skills add anthropics/claude-code --skill frontend-design` | Breaks "distributional convergence" — bold design choices instead of generic Inter/purple/white |
+| **Browser Use** | `npx skills add browser-use/claude-skill` | Live browser automation — navigate, click, fill forms, screenshot, scrape dynamic content |
+| **GWS (Google Workspace)** | `npm install -g @googleworkspace/cli` + `gws mcp` | 50+ Google API automation — Gmail, Drive, Calendar, Sheets, Slides via MCP |
+| **Valyu** | `npx skills add valyuAI/skills` | Real-time search across 36+ data sources (SEC filings, PubMed, ChEMBL, FRED, patents) |
+| **Shannon** | `npx skills add unicodeveloper/shannon` | Autonomous AI pen testing — 96.15% exploit success on XBOW benchmark, 50+ vulnerability types |
+| **PlanetScale** | `npx skills add planetscale/agent-skill` | Schema branching, index-aware query optimization, deploy requests |
+| **Excalidraw** | `npx skills add coleam00/excalidraw-diagram-skill` | Architecture diagrams from natural language with self-validation rendering loop |
+
+### Key Concepts from the Article
+
+**"Distributional convergence"** — Anthropic's term for why LLMs produce visually similar outputs. Models are trained on the statistical center of design decisions, so they reproduce the statistical center. Skills like frontend-design break this by injecting a design philosophy before code generation.
+
+**Self-validation loops** — The Excalidraw skill generates JSON, renders to PNG via Playwright, reviews its own output for layout issues, and fixes problems before presenting. This "generate → render → review → fix" pattern is applicable to any skill that produces visual artifacts.
+
+**PostCompact context renewal** — Community pattern using the new PostCompact hook (v2.1.76) to re-inject critical instructions after compaction completes. Prevents post-compaction amnesia where Claude forgets project rules.
+
+### Community Insights
+
+- Claude Code wins 67% of blind code quality tests vs competitors (500+ Reddit developer analysis)
+- r/ClaudeCode: 4,200+ weekly contributors
+- March usage promotion (Mar 13-27): Anthropic doubled usage quotas during off-peak hours
+- PostCompact hooks being used by community for context renewal patterns
+
+### MCP Ecosystem Updates
+
+- **2026 MCP Roadmap** published: top priorities are Streamable HTTP Transport (horizontal scaling, .well-known discovery), Tasks Primitive improvements, Enterprise adoption
+- Microsoft, AWS, HashiCorp actively building MCP integrations — validates protocol as production-ready
+- Native MCP server management via `/mcp` command (v2.1.70) — no more manual config file editing
+
+### Research Tracking Update
+| Date | Topic | Source | Finding |
+|------|-------|--------|---------|
+| 2026-03-17 | v2.1.68-v2.1.77 | GitHub releases / changelog | 10 releases in 14 days; Opus 4.6 default, 1M context default, MCP elicitation, 4 new hooks, 7 new commands |
+| 2026-03-17 | Skills ecosystem | Article + web research | Universal SKILL.md format, npx skills v7.3.0, Antigravity 1,234+ skills, ${CLAUDE_SKILL_DIR} var |
+| 2026-03-17 | Code Review | Anthropic launch | Multi-agent PR review, $15-25/review, 54% substantive comment rate |
+| 2026-03-17 | Output tokens | v2.1.77 release | 64K default, 128K upper bound for Opus 4.6 and Sonnet 4.6 |
+| 2026-03-17 | Breaking changes | v2.1.68-v2.1.77 | Opus 4/4.1 removed, /output-style deprecated, Windows managed settings path changed |
+| 2026-03-17 | Third-party skills | unicodeveloper article | Frontend Design, Browser Use, GWS, Valyu, Shannon, PlanetScale, Excalidraw tracked |
+| 2026-03-17 | PostCompact pattern | Community blogs | Context renewal via PostCompact hook — re-inject critical instructions after compaction |
 
 ---
 

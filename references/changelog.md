@@ -2,6 +2,54 @@
 
 > Tracks all updates to the claude-code-mastery skill and its knowledge base.
 
+## 2026-03-17 — v1.7.0 (Major Ecosystem Update: v2.1.77, Skills Maturity, Article Analysis)
+
+### Massive Version Catch-Up (v2.1.63 → v2.1.77)
+
+10 releases in 14 days. This is the largest single knowledge base update since v1.0.0.
+
+**What was added/updated:**
+
+**SKILL.md updates across all seven pillars:**
+- **Pillar 2** — 1M context window now default (not beta), 64K/128K output tokens, PostCompact context renewal pattern, `/effort` command, `/context` actionable suggestions
+- **Pillar 3** — MCP elicitation (servers requesting structured input mid-task), `/mcp` native management command, GWS (Google Workspace) skill added to Tier 3
+- **Pillar 4** — Four new hooks documented (InstructionsLoaded, PostCompact, Elicitation, ElicitationResult), new hooks explained section, managed settings path breaking change
+- **Pillar 5** — Code Review capability (multi-agent PR review, $15-25/review, 54% substantive comments)
+- **Pillar 6** — `${CLAUDE_SKILL_DIR}` variable, universal SKILL.md format (38+ agents), `npx skills add` standardized installation, Antigravity Awesome Skills (1,234+ skills, 22K stars), skill discovery sites, notable third-party skills table
+- **Pillar 7** — `/loop` recurring tasks with CronCreate, ExitWorktree tool, `worktree.sparsePaths` for monorepos
+- **Slash commands table** — Added 6 new commands (/effort, /loop, /mcp, /branch, /color, /reload-plugins)
+- **Windows notes** — Added managed settings path breaking change (v2.1.74)
+
+**Knowledge base:**
+- Full version history table v2.1.68 through v2.1.77
+- New hooks table with versions and purposes
+- New slash commands table with versions
+- Breaking changes documented (Opus 4/4.1 removed, /output-style deprecated, Windows managed settings, /fork→/branch)
+- MCP elicitation deep dive
+- Code Review launch details
+- Skills ecosystem maturity analysis (npx skills v7.3.0, Antigravity, discovery sites)
+- Notable third-party skills from article (Frontend Design, Browser Use, GWS, Valyu, Shannon, PlanetScale, Excalidraw)
+- Key concepts: distributional convergence, self-validation loops, PostCompact context renewal
+- Community insights (Reddit analysis, usage promotion)
+- MCP 2026 roadmap summary
+
+### Article Analysis: "10 Must-Have Skills for Claude Code" (unicodeveloper, March 9 2026)
+
+Skills tracked and integrated into knowledge base. Key takeaways incorporated:
+- Universal SKILL.md cross-agent format awareness added to Pillar 6
+- Standardized `npx skills add` installation workflow added
+- Antigravity Awesome Skills as the largest skill library documented
+- Skill discovery sites (aitmpl.com/skills, skills.sh) referenced
+- "Distributional convergence" concept documented as design quality insight
+
+### Breaking Changes Awareness
+- Opus 4 and 4.1 removed from Claude Code (v2.1.68)
+- `/output-style` deprecated → use `/config` (v2.1.73)
+- Windows managed settings path changed (v2.1.74)
+- `/fork` renamed to `/branch` (v2.1.77, backward-compatible)
+
+---
+
 ## 2026-03-03 — v1.6.0 (GSD Extraction: Wave Execution & Spec-Driven Development)
 
 ### New: Wave Execution Orchestration (Pillar 5 addition)
