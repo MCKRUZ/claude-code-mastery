@@ -127,9 +127,43 @@ monorepo/
     └── backend.md         # paths: apps/api/**
 ```
 
+#### Production Global Rules Architecture
+
+A mature setup separates concerns into `~/.claude/CLAUDE.md` (brief, always-loaded) + `~/.claude/rules/*.md` (domain-scoped). This keeps the global CLAUDE.md under 500 tokens while providing deep guidance per domain:
+
+```
+~/.claude/
+├── CLAUDE.md                  # ~20 lines: compact instructions, cross-project conventions, response style
+└── rules/
+    ├── agents.md              # When to auto-spawn agents, commit format, PR workflow
+    ├── coding-style.md        # Immutability patterns (C#/TS), naming, error handling, validation
+    ├── security.md            # Pre-commit checklist: secrets, input validation, JWT, headers, CSRF
+    ├── testing.md             # 80% coverage, TDD flow, test patterns (xUnit/Jasmine/Cypress)
+    ├── patterns.md            # Privacy tags, skeleton project pattern
+    ├── performance.md         # Context window limits, build troubleshooting, research time limits
+    └── nexus-memory.md        # Cross-project memory rules (Nexus integration)
+```
+
+**Global CLAUDE.md should only contain:**
+- Compact instructions (what to preserve during compaction)
+- Cross-project conventions (immutability, validation, coverage, no console.log)
+- Response style (lead with answer, skip summaries, use file:line references)
+
+**Rules files handle domain depth.** Each loads into context only when relevant. Example `coding-style.md`:
+```markdown
+# Coding Style
+## Immutability (CRITICAL)
+- TypeScript: spread operators, never mutate objects/arrays
+- C#: prefer records, `with` expressions, `ImmutableList<T>`
+- NgRx reducers: always return new state objects
+## Naming
+- C#: PascalCase (classes/methods), `_camelCase` (private fields)
+- TypeScript: PascalCase (types), camelCase (vars), kebab-case (files)
+```
+
 ### Pillar 2: Context Management
 
-Claude Code operates within a **1M token context window** by default for Opus 4.6 on Max, Team, and Enterprise plans (as of v2.1.75, March 13 2026). Output tokens expanded to **64K default / 128K upper bound** (v2.1.77).
+Claude Code operates within a **1M token context window** by default for Opus 4.6 on Max, Team, and Enterprise plans (as of v2.1.75). Output tokens expanded to **64K default / 128K upper bound** (v2.1.77). Current version: **v2.1.81**.
 
 **Key strategies:**
 
@@ -179,7 +213,44 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 
 **Recommended tiers:**
 
-**Tier 1 — Essential:**
+**Tier 0 — Hub Architecture (recommended for power users):**
+
+Instead of running 6+ individual MCP servers (each consuming process overhead and requiring separate permissions), consolidate into a single **MCP Hub** that wraps multiple servers behind one process:
+
+```json
+{
+  "mcpServers": {
+    "hub": {
+      "command": "uv",
+      "args": ["--directory", "C:/path/to/mcp-hub", "run", "fastmcp", "run", "src/mcp_hub/server.py"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "",
+        "FIRECRAWL_API_URL": "https://firecrawl.your-server.example"
+      },
+      "description": "Hub — nexus, github, context7, sequential-thinking, firecrawl, chrome-devtools"
+    }
+  }
+}
+```
+
+**Benefits:**
+- Single process instead of 6+ (lower memory, faster startup)
+- Unified permissions: `mcp__hub__search`, `mcp__hub__get_schemas`, `mcp__hub__execute`
+- Shared env vars across all wrapped servers
+- Config-driven: add/remove servers without editing settings.json
+
+**`mcpNotes` pattern** — document why servers were removed so you don't re-add them later:
+```json
+{
+  "mcpNotes": {
+    "sentry": "Removed 2026-02-09 — Add back when deploying production apps",
+    "filesystem": "Removed 2026-02-09 — Built-in Read/Write/Glob/Grep cover file ops",
+    "memory": "Removed 2026-02-09 — cmem MCP provides superior conversation memory"
+  }
+}
+```
+
+**Tier 1 — Essential (if not using Hub):**
 - **GitHub MCP** (`@modelcontextprotocol/server-github`) — Repos, PRs, issues, CI/CD. Use the npm package with a PAT. The `https://api.githubcopilot.com/mcp/` HTTP endpoint does NOT work with Claude Code (incompatible auth).
 - **Context7** (`@upstash/context7-mcp`) — Current library docs (solves hallucinated APIs)
 - **Sequential Thinking** (`@modelcontextprotocol/server-sequential-thinking`) — Better planning
@@ -190,7 +261,7 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 - **Sentry** (`https://mcp.sentry.dev/mcp`) — Production error tracking
 - **Playwright** (`@anthropic-ai/mcp-playwright`) — Browser testing/screenshots
 - **PostgreSQL / DBHub** — Database queries and schema inspection
-- **Memory** (`@modelcontextprotocol/server-memory`) — Persistent memory across sessions
+- **cmem** (conversation memory) — Session persistence + learned lessons across conversations (replaces `@modelcontextprotocol/server-memory`)
 
 **Tier 3 — Situational:**
 - Brave Search, Docker MCP, Figma, Linear/Jira, Notion/Slack, Firecrawl
@@ -232,50 +303,159 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 ```json
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "opus[1m]",
+  "alwaysThinkingEnabled": true,
+  "voiceEnabled": true,
+  "autoUpdatesChannel": "latest",
   "permissions": {
     "allow": [
-      "Read",
-      "Bash(npm run *)", "Bash(npx *)", "Bash(git *)",
-      "Bash(pytest *)", "Bash(python -m *)",
-      "Bash(cargo *)", "Bash(dotnet *)"
+      "Read", "Glob", "Grep", "WebSearch",
+      "Bash(dotnet *)", "Bash(git *)", "Bash(gh *)",
+      "Bash(ng *)", "Bash(npm *)", "Bash(npx *)",
+      "Bash(az *)", "Bash(bicep *)", "Bash(pwsh *)",
+      "Bash(python *)", "Bash(py *)", "Bash(pytest *)",
+      "Bash(ssh *)", "Bash(claude *)",
+      "mcp__hub__search", "mcp__hub__get_schemas", "mcp__hub__execute",
+      "mcp__cmem__search_sessions", "mcp__cmem__list_sessions",
+      "mcp__cmem__get_session", "mcp__cmem__get_session_context",
+      "mcp__cmem__search_and_summarize",
+      "mcp__cmem__search_lessons", "mcp__cmem__get_lesson",
+      "mcp__cmem__save_lesson", "mcp__cmem__validate_lesson",
+      "mcp__cmem__reject_lesson", "mcp__cmem__list_lessons"
     ],
     "deny": [
-      "Read(./.env)", "Read(./.env.*)", "Read(./secrets/**)",
-      "Bash(curl *)", "Bash(wget *)", "Bash(rm -rf *)"
+      "Read(.env*)", "Read(*.env)", "Read(secrets/**)", "Read(appsettings.*.json)",
+      "Bash(rm -rf *)", "Bash(wget *)",
+      "Bash(git push --force *)", "Bash(git reset --hard *)",
+      "Bash(pwsh * Invoke-WebRequest *)", "Bash(pwsh * Invoke-RestMethod *)",
+      "Bash(pwsh * iwr *)", "Bash(pwsh * irm *)"
     ]
   },
   "env": {
-    "CLAUDE_CODE_EFFORT_LEVEL": "high"
+    "ANTHROPIC_BASE_URL": "http://your-proxy:4040",
+    "TRACE_TO_LANGFUSE": "true",
+    "LANGFUSE_PUBLIC_KEY": "",
+    "LANGFUSE_SECRET_KEY": "",
+    "LANGFUSE_HOST": "https://langfuse.your-server.example",
+    "CLAUDE_CODE_EFFORT_LEVEL": "high",
+    "CLAUDE_HOOK_PROFILE": "standard",
+    "CLAUDE_DISABLED_HOOKS": "ollama-delegate"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); project=$(echo \"$input\" | jq -r '.workspace.project_dir // .cwd'); proj=$(basename \"$project\"); used=$(echo \"$input\" | jq -r '.context_window.used_percentage // empty'); remaining=$(echo \"$input\" | jq -r '.context_window.remaining_percentage // empty'); model=$(echo \"$input\" | jq -r '.model.display_name // empty'); out=\"$proj\"; [ -n \"$model\" ] && out=\"$out | $model\"; [ -n \"$used\" ] && out=\"$out | ctx: $(printf '%.0f' \"$used\")% used\"; [ -n \"$remaining\" ] && out=\"$out ($(printf '%.0f' \"$remaining\")% left)\"; echo \"$out\""
+  },
+  "enabledPlugins": {
+    "deep-project@piercelamb-plugins": true,
+    "deep-plan@piercelamb-plugins": true,
+    "deep-implement@piercelamb-plugins": true,
+    "discord@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "claude-code-sdlc@local": true
   }
 }
 ```
 
+**Key patterns in this config:**
+- **`model: "opus[1m]"`** — locks to Opus with 1M context window
+- **`alwaysThinkingEnabled`** — extended thinking on every response (better reasoning)
+- **`ANTHROPIC_BASE_URL`** — proxy for observability/caching (Langfuse traces all API calls)
+- **`CLAUDE_HOOK_PROFILE`** — enables hook profile switching (standard/minimal/off)
+- **`CLAUDE_DISABLED_HOOKS`** — disable specific hooks without removing them
+- **`statusLine`** — shows project name, model, and context usage % in the prompt bar
+- **`enabledPlugins`** — deep-plan/implement for structured TDD workflow, SDLC gates
+- **MCP permissions** — pre-allow hub and cmem tools to avoid permission prompts on every call
+- **Deny PowerShell web requests** — prevents accidental data exfiltration via `Invoke-WebRequest`/`irm`
+
 > **Windows note:** All `Bash(...)` permissions and hook commands execute via Git Bash, not PowerShell. Use Unix-style syntax.
 
-**Hooks for automated quality enforcement:**
+**Production hook stack (full lifecycle):**
+
+A mature setup hooks into every lifecycle event. Here's the actual production stack, ordered by execution:
+
+```
+SessionStart:
+  1. memory-persistence/session-start.ps1   ← Load previous session state
+  2. Nexus sync (node CLI)                  ← Sync cross-project intelligence
+  3. nexus-session-start.mjs                ← Initialize session tracking
+
+PreToolUse (Edit|Write):
+  4. skill-switchboard/switchboard.ps1      ← Inject relevant skills by file type
+  5. strategic-compact/suggest-compact.ps1  ← Warn before context gets too full
+
+PreToolUse (git push):
+  6. Prompt: "List commits and remind user to review"
+
+PreCompact:
+  7. memory-persistence/pre-compact.ps1     ← Save work state before compaction
+  8. Prompt: "Update MEMORY.md, session file, save patterns via cmem"
+
+PostCompact:
+  9. Prompt: "Re-orient: read MEMORY.md, check TaskList, review rules"
+
+PostToolUse (Edit|Write):
+  10. auto-format.sh                        ← Format edited files (prettier, etc.)
+  11. memory-persistence/save-observation.ps1 ← Record file change to session log
+
+PostToolUse (all):
+  12. nexus-post-tool-use.mjs              ← Track tool usage patterns in Nexus
+
+Stop:
+  13. kill-mcp-children.ps1                 ← Clean up zombie MCP processes
+  14. dsl/double-shot-latte.ps1             ← Autonomous continue evaluation
+  15. memory-persistence/session-end.ps1    ← Persist session summary
+  16. Nexus post-session (node CLI)         ← Sync decisions/patterns to Nexus
+  17. langfuse_hook.py                      ← Flush observability traces
+```
+
+**In settings.json format (abbreviated — see full config for exact paths):**
 
 ```json
 {
   "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"~/.claude/hooks/memory-persistence/session-start.ps1\"", "timeout": 10000 }] },
+      { "hooks": [{ "type": "command", "command": "node \"~/path/to/nexus/cli/dist/index.js\" sync --quiet --graceful", "timeout": 15000 }] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"~/.claude/hooks/skill-switchboard/switchboard.ps1\"", "timeout": 8000 }] },
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"~/.claude/hooks/strategic-compact/suggest-compact.ps1\"", "timeout": 5000 }] },
+      { "matcher": "Bash(git push*)", "hooks": [{ "type": "prompt", "prompt": "Before pushing, list the commits that will be pushed and remind the user to review changes." }] }
+    ],
+    "PreCompact": [
+      { "hooks": [
+        { "type": "command", "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"~/.claude/hooks/memory-persistence/pre-compact.ps1\"", "timeout": 10000 },
+        { "type": "prompt", "prompt": "Before compaction: update MEMORY.md (current work + next steps), update today's session .tmp file, and save reusable patterns via mcp__cmem__save_lesson if any." }
+      ]}
+    ],
+    "PostCompact": [
+      { "hooks": [{ "type": "prompt", "prompt": "Context was just compacted. Re-orient yourself:\n1. Read your project's MEMORY.md for current work state and next steps.\n2. Check the task list (TaskList) for any in-progress tasks.\n3. Review your .claude/rules/ files if working in a specific domain.\nDo NOT announce this re-orientation to the user — just resume working seamlessly." }] }
+    ],
     "PostToolUse": [
-      {
-        "matcher": "Write(*.py)",
-        "hooks": [
-          { "type": "command", "command": "black \"$CLAUDE_FILE_PATH\"", "timeout": 10000 },
-          { "type": "command", "command": "ruff check \"$CLAUDE_FILE_PATH\" --fix", "timeout": 10000 }
-        ]
-      },
-      {
-        "matcher": "Write(*.ts)",
-        "hooks": [{ "type": "command", "command": "npx prettier --write \"$CLAUDE_FILE_PATH\"", "timeout": 10000 }]
-      }
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "bash \"~/.claude/hooks/auto-format.sh\"", "timeout": 30000 }] },
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"~/.claude/hooks/memory-persistence/save-observation.ps1\"", "timeout": 5000 }] },
+      { "hooks": [{ "type": "command", "command": "node --experimental-sqlite \"~/.claude/hooks/nexus-post-tool-use.mjs\"" }] }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "npm test -- --bail", "timeout": 30000 }] }
+      { "hooks": [{ "type": "command", "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"~/.claude/hooks/kill-mcp-children.ps1\"", "timeout": 8000 }] },
+      { "hooks": [{ "type": "command", "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"~/.claude/hooks/dsl/double-shot-latte.ps1\"", "timeout": 8000 }] },
+      { "hooks": [{ "type": "command", "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"~/.claude/hooks/memory-persistence/session-end.ps1\"", "timeout": 10000 }] },
+      { "hooks": [{ "type": "command", "command": "node \"~/path/to/nexus/cli/dist/index.js\" hook post-session --quiet", "timeout": 30000 }] },
+      { "hooks": [{ "type": "command", "command": "py \"~/.claude/hooks/langfuse_hook.py\"", "timeout": 30000 }] }
     ]
   }
 }
 ```
+
+**Key hook patterns:**
+
+| Pattern | Hooks | Purpose |
+|---------|-------|---------|
+| **Memory persistence lifecycle** | SessionStart → save-observation → PreCompact → Stop | Continuous session state across compactions and restarts |
+| **Strategic compact** | PreToolUse (Edit\|Write) | Warns before context window fills — prevents mid-task compaction |
+| **Kill MCP children** | Stop | Cleans up zombie MCP server processes that outlive the session |
+| **Langfuse tracing** | Stop + ANTHROPIC_BASE_URL proxy | Full observability — every API call traced, flushed on session end |
+| **Git push guard** | PreToolUse (git push) | Forces review of commits before push — prevents accidental pushes |
 
 > **Important:** Use `$CLAUDE_FILE_PATH` (not `$file`) for the file path variable. Always include a `timeout` value. Avoid bash-style redirects like `2>/dev/null || true` — they can cause issues on Windows.
 
@@ -320,7 +500,7 @@ Eliminates unnecessary check-in interruptions during long autonomous sessions. W
 
 **Throttle logic:** 3 stops within 5 minutes → THROTTLED → Claude stops and surfaces to user. This prevents infinite loops.
 
-**Key gotcha:** Place DSL as the **first two Stop hooks** — before session-end and save-lessons hooks. Claude still processes all Stop hooks in sequence; DSL's "continue" instruction takes effect after all hooks complete.
+**Key gotcha:** Place DSL **before** session-end and save-lessons hooks in the Stop sequence, but **after** cleanup hooks like kill-mcp-children. Claude processes all Stop hooks in sequence; DSL's "continue" instruction takes effect after all hooks complete.
 
 **Hook types:** `command` (shell), `prompt` (LLM-based, runs via Haiku), `agent` (multi-turn with tool access), `http` (POST to endpoint).
 
@@ -360,9 +540,18 @@ Task(subagent_type: "code-reviewer", prompt: "Review auth.ts for security issues
 
 #### Custom Agents
 
-Create project or domain-specific agents in `~/.claude/agents/` (global) or `.claude/agents/` (project-local):
+Create project or domain-specific agents in `~/.claude/agents/` (global) or `.claude/agents/` (project-local).
 
-**Agent file format** (`~/.claude/agents/my-agent/AGENT.md`):
+**Organize agents by purpose:**
+```
+~/.claude/agents/
+├── engineering/         # Engineering workflow agents (code review, architecture)
+├── matts-custom/        # Personal/custom agents (brand-specific, domain-specific)
+├── testing/             # Test-focused agents (integration, E2E, load testing)
+└── _archived/           # Retired agents (keep for reference, don't delete)
+```
+
+**Agent file format** (`~/.claude/agents/engineering/my-agent/AGENT.md`):
 ```yaml
 ---
 name: my-custom-agent
@@ -639,6 +828,97 @@ survive compaction.
 
 **Reference:** SpillwaveSolutions/agent_rulez on GitHub — comprehensive YAML-based policy engine for Claude Code, OpenCode, and Gemini CLI.
 
+#### Skill Scope Classification: Global vs Project-Level
+
+Every skill installed globally (`~/.claude/skills/`) costs tokens **on every message in every project** — it appears in the system prompt listing regardless of relevance. Project-level skills (`.claude/skills/` in the repo root) only appear when working in that project.
+
+**The rule:** If you wouldn't want a skill listed when working in an unrelated project, it belongs at project level.
+
+**Decision framework:**
+
+| Question | Global | Project |
+|----------|--------|---------|
+| Useful in any codebase? | ✅ | ❌ |
+| Domain-specific (ComfyUI, YouTube, .NET)? | ❌ | ✅ |
+| Used < once a month per project? | ❌ | ✅ |
+| Workflow skill (commit, review, plan)? | ✅ | ❌ |
+| Content/brand/persona for one client? | ❌ | ✅ |
+
+**Global skills — install table:**
+
+These are standalone skills installed into `~/.claude/skills/`. Each has a source repo for reproducible setup.
+
+| Skill | Source | Install |
+|-------|--------|---------|
+| `claude-code-mastery` | [MCKRUZ/claude-code-mastery](https://github.com/MCKRUZ/claude-code-mastery) | `git clone https://github.com/MCKRUZ/claude-code-mastery ~/.claude/skills/claude-code-mastery` |
+| `dashboard-creator` | [mhattingpete/claude-skills-marketplace](https://github.com/mhattingpete/claude-skills-marketplace) | `npx skills add mhattingpete/claude-skills-marketplace --skill dashboard-creator` |
+| `demo-video` | [MCKRUZ/demo-video-skill](https://github.com/MCKRUZ/demo-video-skill) | `git clone https://github.com/MCKRUZ/demo-video-skill ~/.claude/skills/demo-video` |
+| `docx` | [anthropics/skills](https://github.com/anthropics/skills) | `npx skills add anthropics/skills --skill docx` |
+| `excalidraw-diagram-generator` | [coleam00/excalidraw-diagram-skill](https://github.com/coleam00/excalidraw-diagram-skill) | `npx skills add coleam00/excalidraw-diagram-skill` |
+| `find-skills` | [anthropics/skills](https://github.com/anthropics/skills) | `npx skills add anthropics/skills --skill find-skills` |
+| `functional-design` | [MCKRUZ/functional-design](https://github.com/MCKRUZ/functional-design) | `git clone https://github.com/MCKRUZ/functional-design ~/.claude/skills/functional-design` |
+| `humanizer` | [blader/humanizer](https://github.com/blader/humanizer) | `git clone https://github.com/blader/humanizer ~/.claude/skills/humanizer` |
+| `llm-cost-optimizer` | [MCKRUZ/llm-cost-optimizer-skill](https://github.com/MCKRUZ/llm-cost-optimizer-skill) | `git clone https://github.com/MCKRUZ/llm-cost-optimizer-skill ~/.claude/skills/llm-cost-optimizer` |
+| `pdf` | [anthropics/skills](https://github.com/anthropics/skills) | `npx skills add anthropics/skills --skill pdf` |
+| `project-memory` | [SpillwaveSolutions/project-memory](https://github.com/SpillwaveSolutions/project-memory) | `git clone https://github.com/SpillwaveSolutions/project-memory ~/.claude/skills/project-memory` |
+| `security-review` | [MCKRUZ/security-review-skill](https://github.com/MCKRUZ/security-review-skill) | `git clone https://github.com/MCKRUZ/security-review-skill ~/.claude/skills/security-review` |
+| `shannon` | [KeygraphHQ/shannon](https://github.com/KeygraphHQ/shannon) | `npx skills add unicodeveloper/shannon` |
+| `skeptic` | [MCKRUZ/skeptic-skill](https://github.com/MCKRUZ/skeptic-skill) | `git clone https://github.com/MCKRUZ/skeptic-skill ~/.claude/skills/skeptic` |
+| `slides` | [MCKRUZ/slides-skill](https://github.com/MCKRUZ/slides-skill) | `git clone https://github.com/MCKRUZ/slides-skill ~/.claude/skills/slides` |
+| `tdd-workflow` | [MCKRUZ/tdd-workflow-skill](https://github.com/MCKRUZ/tdd-workflow-skill) | `git clone https://github.com/MCKRUZ/tdd-workflow-skill ~/.claude/skills/tdd-workflow` |
+| `visual-explainer` | [nicobailon/visual-explainer](https://github.com/nicobailon/visual-explainer) | `git clone https://github.com/nicobailon/visual-explainer ~/.claude/skills/visual-explainer` |
+
+**Built-in capabilities (not standalone skills — provided by plugins or Claude Code itself):**
+
+| Capability | Source | How to get |
+|------------|--------|------------|
+| `code-review`, `build-fix`, `refactor-clean` | code-simplifier plugin | `/plugin marketplace add anthropics/claude-code` |
+| `plan`, `simplify`, `learn` | code-simplifier plugin | `/plugin marketplace add anthropics/claude-code` |
+| `session-insights`, `update-codemaps`, `update-docs` | claude-code-sdlc plugin | Install locally |
+| `e2e`, `tdd`, `test-coverage`, `harness-audit` | claude-code-sdlc plugin | Install locally |
+| `deep-project`, `deep-plan`, `deep-implement` | piercelamb-plugins | `/plugin marketplace add piercelamb/plugins` |
+| `discord` | claude-plugins-official | `/plugin marketplace add anthropics/claude-code` |
+
+**Project-level skills (install only in relevant projects):**
+
+| Skill | Project | Category |
+|-------|---------|----------|
+| `comfyui-*` (12 skills) | ComfyUI Expert | AI image/video generation |
+| `youtube-*` (8 skills), `remotion-best-practices` | ProjectPrism | Video production |
+| `matt-kruczek-blog-writer`, `brand`, `banner-design` | personal-brand-assistant | Personal brand |
+| `design-system`, `ui-ux-pro-max`, `frontend-design-pro` | ArchitectureHelper, matthewkruczek-ai | Frontend design |
+| `consulting-deck`, `sow-writer`, `client-intake` + 5 more | claude-consultant | Consulting |
+| `grafana-dashboards` | openclaw-langfuse | Observability |
+| `pluralsight-skill` | pluralsight-skill | Course authoring |
+
+**Installing a project-level skill:**
+
+```bash
+# From the project root — creates .claude/skills/<skill-name>/
+mkdir -p .claude/skills
+cp -r ~/.claude/skills/comfyui-workflow-builder .claude/skills/
+```
+
+Or symlink (avoids duplication):
+```powershell
+# PowerShell — requires admin or Developer Mode enabled
+New-Item -ItemType SymbolicLink -Path ".claude/skills/comfyui-workflow-builder" -Target "$HOME/.claude/skills/comfyui-workflow-builder"
+```
+
+After moving, remove from global to eliminate the system prompt overhead:
+```bash
+rm -rf ~/.claude/skills/comfyui-workflow-builder
+```
+
+**Skill Audit workflow** — when invoked as "audit my skills" or "optimize skill scope":
+
+1. List all skills in `~/.claude/skills/` (global installed)
+2. Identify the current project type from CLAUDE.md, package.json, or file patterns
+3. Classify each globally-installed skill against the decision framework above
+4. Propose a migration plan: which to keep global, which to move to this project, which to move to OTHER projects
+5. For skills belonging to other projects not currently open: note them for migration (don't act on other projects without confirmation)
+6. Offer to execute the moves for the current project
+
 ### Pillar 7: CI/CD and Automation
 
 **Auth CLI (v2.1.41+):**
@@ -699,7 +979,7 @@ foreach ($feature in $features) {
 /loop /babysit-prs
 ```
 
-Uses CronCreate/CronDelete/CronList scheduling tools. Jobs are session-scoped (gone when Claude exits) and auto-expire after 3 days. Disable with `CLAUDE_CODE_DISABLE_CRON` env var.
+Uses CronCreate/CronDelete/CronList scheduling tools. Jobs are session-scoped (gone when Claude exits) and auto-expire after 7 days. Disable with `CLAUDE_CODE_DISABLE_CRON` env var.
 
 **Worktree improvements:**
 - `ExitWorktree` tool (v2.1.72): leave worktree sessions mid-conversation (keep or remove)

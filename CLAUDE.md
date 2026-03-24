@@ -3,52 +3,55 @@
 ## Nexus Intelligence
 
 *Auto-updated by Nexus — do not edit this section manually.*
-*Last sync: 2026-03-17*
+*Last sync: 2026-03-24*
 
 ### Portfolio
 | Project | Description | Tech |
 |---------|------------|------|
-| code | Pinokio plugin — a VS Code-like code editor plugin running inside the Pinokio A… | — |
-| app | **Qwen3-TTS** — a Gradio web UI for Alibaba's Qwen3-TTS text-to-speech models, … | — |
-| kohya_ss | **Kohya's GUI** — the standard GUI/CLI for training Stable Diffusion models inc… | — |
+| project-avatar | — | — |
 | ComfyUI | **ComfyUI** — the main local ComfyUI installation at E:/ComfyUI-Easy-Install/Co… | — |
-| openclaw | **OpenClaw** — a personal AI assistant platform you run on your own devices, an… | — |
-| eShopLite | **eShopLite** — Microsoft reference .NET application implementing an eCommerce … | — |
-| agent-framework | **Microsoft Agent Framework** — comprehensive multi-language framework for buil… | — |
-| Agent365-dotnet | **Microsoft Agent 365 SDK** — C#/.NET SDK that extends the Microsoft 365 Agents… | — |
-| firecrawl | **Firecrawl** — a web scraper API that takes URLs, crawls them, and converts co… | — |
-| ai-toolkit | **AI Toolkit by Ostris** — all-in-one training suite for diffusion models (imag… | — |
-| musubi-tuner | **Musubi Tuner** — LoRA training scripts for modern video and image diffusion a… | — |
-| ComfyUI-Qwen-TTS | **ComfyUI-Qwen-TTS** — ComfyUI custom nodes for speech synthesis using Alibaba'… | — |
-| claude-code-langfuse-template | **Claude Code + Langfuse Template** — production-ready setup for observing Clau… | — |
-| fluxgym | **Flux Gym** — simple web UI for training FLUX LoRAs with low VRAM support (12G… | — |
-| everything-claude-code | **Everything Claude Code** — complete collection of Claude Code configs from an… | — |
-| awesome-claude-skills | **Awesome Claude Skills** — curated list of practical Claude Skills for Claude.… | — |
-| clawd | **clawd** — local installation of the Claude Code CLI tool at C:/Users/kruz7/cl… | — |
 | sage-voice | **sage-voice** — MCKRUZ project for Sage's voice capabilities.
 
 Sage is the AI … | — |
-| sage-voice-bridge | **sage-voice-bridge** — bridge service connecting Sage's voice system to the br… | — |
 | openclaw-voice | **OpenClaw Voice** — Discord voice bot enabling AI agents (Jarvis and Sage) to … | — |
-| openclaw-realism | **OpenClaw Realism** — framework/blueprint for making OpenClaw agents feel like… | — |
-| openclaw-langfuse | **openclaw-langfuse** — OpenClaw plugin for sending agent traces to Langfuse fo… | — |
 | matthewkruczek-ai | **matthewkruczek.ai** — static personal brand website for Matthew Kruczek (EY M… | — |
-| jarvis-voice-bridge | **jarvis-voice-bridge** — bridge service for Jarvis agent's voice integration.
-… | — |
-| github-agentic-workflows-poc | **GitHub Agentic Workflows POC** — proof-of-concept for GitHub's Agentic Workfl… | — |
 | **claude-code-mastery** (this) | **Claude Code Mastery** — the definitive Claude Code setup and configuration sk… | — |
-| TeamsBuddy | **TeamsBuddy** — real-time Microsoft Teams meeting transcript monitor with AI-p… | — |
-| SocialMedia | **SocialMedia** — MCKRUZ social media project.
-
-No documentation files found in… | — |
 | ProjectPrism | **Prismcast / ProjectPrism** — autonomous AI news aggregation, synthesis, and v… | — |
-| Microsoft-Agent-Skills-POC | **Microsoft Agent Skills POC** — proof-of-concept for building Agent Skills for… | — |
-| DotNetSkills | **DotNetSkills / Skills Executor** — .NET orchestrator for executing Anthropic-… | — |
 | ComfyUI Expert | **VideoAgent / ComfyUI Expert** — session-scoped Claude Code orchestrator that … | — |
-| CodeReviewAssistant | **CodeReviewAssistant** — MCP server for capturing, analyzing, and documenting … | — |
 | ArchitectureHelper | **AzureCraft / ArchitectureHelper** — AI-native Azure infrastructure designer f… | — |
-| AI-SDLC | **AI-PDLC Platform** — multi-offering system for AI-assisted consulting and sof… | — |
 | Nexus | Nexus is a local-first cross-project intelligence layer for Claude Code. | — |
+| _+27 inactive_ | — | — |
+
+### Context from Nexus
+#### Roadmap: Next Features
+User-approved feature ideas (2026-03-24):
+
+1. **MCP Tool Intelligence Layer** — Nexus sits on mcp-hub, learns which tools succeed/fail per project, i…
+*Tags: roadmap, features, mcp-hub, planning*
+
+#### Backlog: Show all active MCP servers in Claude Config tab
+The Claude Config dashboard page only shows MCP servers from settings.json/settings.local.json, not the full set of running servers (plugins + projec…
+*Tags: backlog, dashboard, mcp, claude-config*
+
+#### Token Budget Optimization Session - 2026-03-18
+## Token Budget Optimizations Applied
+
+### 1. Portfolio Table Filter (claude-md-sync.ts)
+- Before: All 35+ projects listed in every CLAUDE.md sync (~…
+*Tags: token-budget, skills, portfolio, optimization*
+
+#### Session Insights - 2026-03-17
+## Session Insights - 2026-03-17
+
+**Scope:** 20 sessions, ~1 month, 670 total messages, 33.5 avg msgs/session
+
+### Top Projects
+1. **OpenClaw** — 5 s…
+*Tags: insights, sessions, analytics*
+
+#### OpenClaw Ollama Fallback & Stop Hook JSON Validation Fix
+(1) OpenClaw agent fallback chain requires tool-capable models; dolphin-llama3 doesn't support tools so was removed; llama3.1:8b being pulled as Olla…
+*Tags: openclaw, ollama, hooks, bug-fix*
 
 ### Recorded Decisions
 - **[security]** Sanitize and rotate credentials after eval runs that may expose secrets
@@ -62,7 +65,7 @@ No documentation files found in… | — |
 - **[architecture]** Use anchored, objective assertion types for eval scoring instead of subjective …
   > Initial eval used vague assertions like 'sequence_check' and subjective descriptions. Refactored to use concrete assertion types: contains, regex, question_before_code (line position), json_valid, token_limit to reduce scoring ambiguity.
 
-> **Cross-project rule**: Before making decisions that affect shared concerns (APIs, auth, data formats, deployment), run `nexus_query` to check for existing decisions and conflicts across the portfolio.
+> **Cross-project rule**: Before making decisions that affect shared concerns (APIs, auth, data formats, deployment) or asking the user for server/SSH/infrastructure details, run `nexus_query` to check for existing decisions, notes, and conflicts across the portfolio.
 
 *[Nexus: run `nexus query` to search full knowledge base]*
 <!-- nexus:end -->

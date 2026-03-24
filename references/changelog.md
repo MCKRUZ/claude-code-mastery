@@ -2,6 +2,25 @@
 
 > Tracks all updates to the claude-code-mastery skill and its knowledge base.
 
+## 2026-03-24 — v1.8.0 (Production Setup Reference Architecture)
+
+### What Changed
+
+The skill now documents the actual battle-tested production setup as the reference architecture, replacing generic examples.
+
+**SKILL.md updates:**
+- **Pillar 1** — Added "Production Global Rules Architecture" section documenting the `~/.claude/CLAUDE.md` + `~/.claude/rules/*.md` pattern with all 7 rule files
+- **Pillar 3** — Added "Tier 0 — Hub Architecture" documenting the MCP Hub consolidation pattern (single process wrapping 6+ servers), `mcpNotes` pattern for documenting removed servers
+- **Pillar 4** — Replaced generic settings.json with actual production config (opus[1m], alwaysThinkingEnabled, Langfuse tracing, extended permissions, statusLine, plugins). Replaced basic hooks example with full lifecycle hook stack (16 hooks across 6 events)
+- **Pillar 5** — Added custom agent directory organization pattern (engineering/, matts-custom/, testing/, _archived/)
+- **Version references** — Updated to v2.1.81
+
+**Knowledge base:**
+- Added 2026-03-24 entry documenting v2.1.78-81 and the production setup patterns
+- Updated last-updated date
+
+---
+
 ## 2026-03-17 — v1.7.0 (Major Ecosystem Update: v2.1.77, Skills Maturity, Article Analysis)
 
 ### Massive Version Catch-Up (v2.1.63 → v2.1.77)

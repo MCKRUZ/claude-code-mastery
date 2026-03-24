@@ -1,7 +1,41 @@
 # Claude Code Knowledge Base
 
-> **Last updated:** 2026-03-17
+> **Last updated:** 2026-03-24
 > **Format:** Append-only log. New entries go at the top with dates. Never delete old entries.
+
+---
+
+## 2026-03-24 — Production Setup Documentation (v2.1.78–v2.1.81)
+
+### Version Update
+Running **v2.1.81** as of 2026-03-24. Versions v2.1.78-81 include incremental stability and quality improvements. No major breaking changes observed since v2.1.77.
+
+### Production Setup Documented as Reference Architecture
+
+The skill now documents the actual battle-tested setup running on the primary development machine instead of generic examples:
+
+**MCP Hub Architecture (Tier 0):**
+- Single `mcp-hub` process consolidating 6+ MCP servers (nexus, github, context7, sequential-thinking, firecrawl, chrome-devtools)
+- Unified permissions via `mcp__hub__search/get_schemas/execute`
+- `mcpNotes` pattern for tracking removed servers with reasons and dates
+
+**Full Lifecycle Hook Stack:**
+- SessionStart: memory-persistence → Nexus sync → nexus-session-start
+- PreToolUse: skill-switchboard → strategic-compact → git-push guard
+- PreCompact/PostCompact: memory persistence + context renewal prompts
+- PostToolUse: auto-format → memory observation → nexus tracking
+- Stop: kill-mcp-children → DSL → memory session-end → Nexus post-session → Langfuse flush
+
+**Production Settings:**
+- `opus[1m]` with `alwaysThinkingEnabled`, Langfuse tracing via `ANTHROPIC_BASE_URL` proxy
+- Extended permissions (Glob, Grep, WebSearch pre-allowed; MCP tools pre-allowed)
+- StatusLine showing project/model/context usage
+- Plugin stack: deep-plan/implement, discord, code-simplifier, SDLC gates
+- Custom agents organized by purpose: engineering/, matts-custom/, testing/, _archived/
+
+**Global Rules Architecture:**
+- Lean `~/.claude/CLAUDE.md` (~20 lines) + 7 domain-scoped `~/.claude/rules/*.md` files
+- Rules cover: agents, coding-style, security, testing, patterns, performance, nexus-memory
 
 ---
 
