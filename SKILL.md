@@ -163,7 +163,7 @@ A mature setup separates concerns into `~/.claude/CLAUDE.md` (brief, always-load
 
 ### Pillar 2: Context Management
 
-Claude Code operates within a **1M token context window** by default for Opus 4.6 on Max, Team, and Enterprise plans (as of v2.1.75). Output tokens expanded to **64K default / 128K upper bound** (v2.1.77). Current version: **v2.1.81**.
+Claude Code operates within a **1M token context window** by default for Opus 4.6 on Max, Team, and Enterprise plans (as of v2.1.75). Output tokens expanded to **64K default / 128K upper bound** (v2.1.77). Current version: **v2.1.92**.
 
 **Key strategies:**
 
@@ -184,6 +184,7 @@ Claude Code operates within a **1M token context window** by default for Opus 4.
 - **CLI tools still have zero overhead.** Prefer them for simple tasks. But the old "20K token MCP limit" rule is now largely obsolete thanks to Tool Search.
 - **Rule of thumb (updated):** With Tool Search enabled, you can run many MCP servers freely. Without it (older versions), >20K tokens of MCP definitions will cripple Claude.
 - **Effort levels.** Use `/effort` to adjust model effort (low/medium/high). Use "ultrathink" keyword in prompts for one-shot high-effort analysis.
+- **Context-mode plugin.** The `context-mode` plugin (mksglu/context-mode) intercepts tool calls that produce large output and routes them through a sandbox — only your printed summary enters the context window. Prevents raw `Bash` or `Read` output from flooding the window. Use `ctx_batch_execute` for research, `ctx_search` for follow-ups, `ctx_execute`/`ctx_execute_file` for data processing. Check savings with `/context-mode:ctx-stats`.
 
 ### Pillar 3: MCP Server Stack
 
@@ -213,9 +214,30 @@ claude mcp add --transport http sentry https://mcp.sentry.dev/mcp
 
 **Recommended tiers:**
 
-**Tier 0 — Hub Architecture (recommended for power users):**
+**Tier 0 — MCP Gateway Architecture (recommended for power users):**
 
-Instead of running 6+ individual MCP servers (each consuming process overhead and requiring separate permissions), consolidate into a single **MCP Hub** that wraps multiple servers behind one process:
+Instead of running 6+ individual MCP servers (each consuming process overhead and requiring separate permissions), consolidate behind a single **MCP Gateway** that routes to multiple backend servers:
+
+**Option A — Remote gateway (Bifrost, recommended):**
+
+Run a gateway process on a home server or always-on machine. Claude Code connects via HTTP:
+
+```json
+{
+  "mcpServers": {
+    "bifrost": {
+      "type": "http",
+      "url": "http://your-server:8090/mcp"
+    }
+  }
+}
+```
+
+The gateway wraps multiple backend servers (GitHub, Context7, Sequential Thinking, Firecrawl, YouTube, etc.) behind one endpoint. Configure backends in the gateway's own config — Claude Code only sees one server.
+
+**Option B — Local hub (FastMCP wrapping):**
+
+For fully local setups, use a Python FastMCP server that wraps multiple servers:
 
 ```json
 {
@@ -224,28 +246,28 @@ Instead of running 6+ individual MCP servers (each consuming process overhead an
       "command": "uv",
       "args": ["--directory", "C:/path/to/mcp-hub", "run", "fastmcp", "run", "src/mcp_hub/server.py"],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "",
-        "FIRECRAWL_API_URL": "https://firecrawl.your-server.example"
-      },
-      "description": "Hub — nexus, github, context7, sequential-thinking, firecrawl, chrome-devtools"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": ""
+      }
     }
   }
 }
 ```
 
-**Benefits:**
-- Single process instead of 6+ (lower memory, faster startup)
-- Unified permissions: `mcp__hub__search`, `mcp__hub__get_schemas`, `mcp__hub__execute`
-- Shared env vars across all wrapped servers
-- Config-driven: add/remove servers without editing settings.json
+**Benefits of gateway architecture:**
+- Single connection instead of 6+ processes (lower memory, faster startup)
+- Unified permissions: `mcp__bifrost__*` (or `mcp__hub__*` for local)
+- Backend servers managed independently — add/remove without editing Claude settings
+- Remote gateways survive Claude Code restarts (no cold-start latency)
 
 **`mcpNotes` pattern** — document why servers were removed so you don't re-add them later:
 ```json
 {
   "mcpNotes": {
-    "sentry": "Removed 2026-02-09 — Add back when deploying production apps",
-    "filesystem": "Removed 2026-02-09 — Built-in Read/Write/Glob/Grep cover file ops",
-    "memory": "Removed 2026-02-09 — cmem MCP provides superior conversation memory"
+    "sentry": "Removed 2026-02-09 — Add back when deploying production apps: https://mcp.sentry.dev/mcp",
+    "filesystem": "Removed 2026-02-09 — Built-in Read/Write/Glob/Grep cover file ops, saved ~2-3K tokens",
+    "memory": "Removed 2026-02-09 — cmem MCP provides superior conversation memory + learned lessons",
+    "hub-mode": "Replaced mcp-hub with Bifrost MCP gateway on mac-mini:8090 (2026-03-26). Nexus runs direct as nexus-local.",
+    "config-location": "MCP servers are managed in ~/.claude.json via 'claude mcp add/remove', NOT in settings.json"
   }
 }
 ```
@@ -307,6 +329,7 @@ Instead of running 6+ individual MCP servers (each consuming process overhead an
   "alwaysThinkingEnabled": true,
   "voiceEnabled": true,
   "autoUpdatesChannel": "latest",
+  "skipDangerousModePermissionPrompt": true,
   "permissions": {
     "allow": [
       "Read", "Glob", "Grep", "WebSearch",
@@ -315,13 +338,8 @@ Instead of running 6+ individual MCP servers (each consuming process overhead an
       "Bash(az *)", "Bash(bicep *)", "Bash(pwsh *)",
       "Bash(python *)", "Bash(py *)", "Bash(pytest *)",
       "Bash(ssh *)", "Bash(claude *)",
-      "mcp__hub__search", "mcp__hub__get_schemas", "mcp__hub__execute",
-      "mcp__cmem__search_sessions", "mcp__cmem__list_sessions",
-      "mcp__cmem__get_session", "mcp__cmem__get_session_context",
-      "mcp__cmem__search_and_summarize",
-      "mcp__cmem__search_lessons", "mcp__cmem__get_lesson",
-      "mcp__cmem__save_lesson", "mcp__cmem__validate_lesson",
-      "mcp__cmem__reject_lesson", "mcp__cmem__list_lessons"
+      "mcp__bifrost__*",
+      "mcp__nexus-local__*"
     ],
     "deny": [
       "Read(.env*)", "Read(*.env)", "Read(secrets/**)", "Read(appsettings.*.json)",
@@ -332,7 +350,6 @@ Instead of running 6+ individual MCP servers (each consuming process overhead an
     ]
   },
   "env": {
-    "ANTHROPIC_BASE_URL": "http://your-proxy:4040",
     "TRACE_TO_LANGFUSE": "true",
     "LANGFUSE_PUBLIC_KEY": "",
     "LANGFUSE_SECRET_KEY": "",
@@ -343,15 +360,23 @@ Instead of running 6+ individual MCP servers (each consuming process overhead an
   },
   "statusLine": {
     "type": "command",
-    "command": "input=$(cat); project=$(echo \"$input\" | jq -r '.workspace.project_dir // .cwd'); proj=$(basename \"$project\"); used=$(echo \"$input\" | jq -r '.context_window.used_percentage // empty'); remaining=$(echo \"$input\" | jq -r '.context_window.remaining_percentage // empty'); model=$(echo \"$input\" | jq -r '.model.display_name // empty'); out=\"$proj\"; [ -n \"$model\" ] && out=\"$out | $model\"; [ -n \"$used\" ] && out=\"$out | ctx: $(printf '%.0f' \"$used\")% used\"; [ -n \"$remaining\" ] && out=\"$out ($(printf '%.0f' \"$remaining\")% left)\"; echo \"$out\""
+    "command": "... (claude-hud plugin — see enabledPlugins)"
   },
   "enabledPlugins": {
     "deep-project@piercelamb-plugins": true,
     "deep-plan@piercelamb-plugins": true,
     "deep-implement@piercelamb-plugins": true,
-    "discord@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
-    "claude-code-sdlc@local": true
+    "context-mode@context-mode": true,
+    "claude-hud@claude-hud": true
+  },
+  "extraKnownMarketplaces": {
+    "context-mode": {
+      "source": { "source": "github", "repo": "mksglu/context-mode" }
+    },
+    "claude-hud": {
+      "source": { "source": "github", "repo": "jarrodwatts/claude-hud" }
+    }
   }
 }
 ```
@@ -359,12 +384,14 @@ Instead of running 6+ individual MCP servers (each consuming process overhead an
 **Key patterns in this config:**
 - **`model: "opus[1m]"`** — locks to Opus with 1M context window
 - **`alwaysThinkingEnabled`** — extended thinking on every response (better reasoning)
-- **`ANTHROPIC_BASE_URL`** — proxy for observability/caching (Langfuse traces all API calls)
+- **`skipDangerousModePermissionPrompt`** — skip extra confirmation when entering dangerous mode (power users only)
 - **`CLAUDE_HOOK_PROFILE`** — enables hook profile switching (standard/minimal/off)
 - **`CLAUDE_DISABLED_HOOKS`** — disable specific hooks without removing them
-- **`statusLine`** — shows project name, model, and context usage % in the prompt bar
-- **`enabledPlugins`** — deep-plan/implement for structured TDD workflow, SDLC gates
-- **MCP permissions** — pre-allow hub and cmem tools to avoid permission prompts on every call
+- **`statusLine`** — claude-hud plugin shows project name, model, context usage %, and task state in the prompt bar
+- **`enabledPlugins`** — deep-plan/implement for structured TDD workflow, context-mode for context window protection, claude-hud for status display
+- **`extraKnownMarketplaces`** — registers third-party plugin sources (context-mode, claude-hud) so `/plugin marketplace` can discover them
+- **MCP permissions** — pre-allow Bifrost gateway and Nexus tools via wildcards (`mcp__bifrost__*`, `mcp__nexus-local__*`) to avoid per-tool permission prompts
+- **Langfuse tracing** — `TRACE_TO_LANGFUSE` + credentials enable observability. Traces flushed via `langfuse_hook.py` Stop hook (no proxy needed)
 - **Deny PowerShell web requests** — prevents accidental data exfiltration via `Invoke-WebRequest`/`irm`
 
 > **Windows note:** All `Bash(...)` permissions and hook commands execute via Git Bash, not PowerShell. Use Unix-style syntax.
@@ -874,10 +901,9 @@ These are standalone skills installed into `~/.claude/skills/`. Each has a sourc
 |------------|--------|------------|
 | `code-review`, `build-fix`, `refactor-clean` | code-simplifier plugin | `/plugin marketplace add anthropics/claude-code` |
 | `plan`, `simplify`, `learn` | code-simplifier plugin | `/plugin marketplace add anthropics/claude-code` |
-| `session-insights`, `update-codemaps`, `update-docs` | claude-code-sdlc plugin | Install locally |
-| `e2e`, `tdd`, `test-coverage`, `harness-audit` | claude-code-sdlc plugin | Install locally |
 | `deep-project`, `deep-plan`, `deep-implement` | piercelamb-plugins | `/plugin marketplace add piercelamb/plugins` |
-| `discord` | claude-plugins-official | `/plugin marketplace add anthropics/claude-code` |
+| `ctx-doctor`, `ctx-stats`, `ctx-upgrade` | context-mode plugin | Add marketplace: `mksglu/context-mode`, then enable |
+| Status line (project, model, context %) | claude-hud plugin | Add marketplace: `jarrodwatts/claude-hud`, then enable |
 
 **Project-level skills (install only in relevant projects):**
 

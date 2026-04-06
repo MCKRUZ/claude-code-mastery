@@ -24,12 +24,14 @@
       "Bash(dotnet *)"
     ],
     "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(./secrets/**)",
+      "Read(.env*)",
+      "Read(*.env)",
+      "Read(secrets/**)",
       "Bash(curl *)",
       "Bash(wget *)",
-      "Bash(rm -rf *)"
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)"
     ]
   },
   "env": {
@@ -81,6 +83,44 @@ See `hooks/dsl/double-shot-latte.ps1` for the state tracker script.
 }
 ```
 
+### Power User — Plugin-Enhanced (Windows)
+
+Adds context-mode (context window protection) and claude-hud (status line). Requires registering third-party marketplaces.
+
+```json
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Read", "Glob", "Grep", "WebSearch",
+      "Bash(npm run *)", "Bash(npx *)", "Bash(git *)",
+      "Bash(pytest *)", "Bash(python -m *)", "Bash(uv run *)",
+      "Bash(cargo *)", "Bash(dotnet *)", "Bash(docker compose *)"
+    ],
+    "deny": [
+      "Read(.env*)", "Read(*.env)", "Read(secrets/**)",
+      "Bash(curl *)", "Bash(wget *)", "Bash(rm -rf *)"
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_EFFORT_LEVEL": "high"
+  },
+  "enabledPlugins": {
+    "code-simplifier@claude-plugins-official": true,
+    "context-mode@context-mode": true,
+    "claude-hud@claude-hud": true
+  },
+  "extraKnownMarketplaces": {
+    "context-mode": {
+      "source": { "source": "github", "repo": "mksglu/context-mode" }
+    },
+    "claude-hud": {
+      "source": { "source": "github", "repo": "jarrodwatts/claude-hud" }
+    }
+  }
+}
+```
+
 ### Power User — Agent Teams Enabled (Windows)
 
 ```json
@@ -100,9 +140,9 @@ See `hooks/dsl/double-shot-latte.ps1` for the state tracker script.
       "Bash(docker compose *)"
     ],
     "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(./secrets/**)",
+      "Read(.env*)",
+      "Read(*.env)",
+      "Read(secrets/**)",
       "Bash(curl *)",
       "Bash(wget *)",
       "Bash(rm -rf *)"

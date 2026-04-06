@@ -1,7 +1,58 @@
 # Claude Code Knowledge Base
 
-> **Last updated:** 2026-03-24
+> **Last updated:** 2026-04-06
 > **Format:** Append-only log. New entries go at the top with dates. Never delete old entries.
+
+---
+
+## 2026-04-06 — Settings Sync & Architecture Evolution (v2.1.82–v2.1.92)
+
+### Version Update
+Running **v2.1.92** as of 2026-04-06. Versions v2.1.82-92 include incremental improvements. No major breaking changes observed since v2.1.81.
+
+### MCP Gateway Migration: mcp-hub → Bifrost
+
+The production MCP architecture evolved from a local Python mcp-hub (FastMCP wrapping) to **Bifrost**, a remote MCP gateway running on mac-mini:8090. Key changes:
+
+- **Before:** `mcp-hub` as a local uv/FastMCP process wrapping 6+ servers
+- **After:** Bifrost HTTP gateway on mac-mini, Claude Code connects via `"type": "http"` 
+- **Benefit:** Gateway survives Claude Code restarts, no local process management, shared across machines
+- MCP permissions simplified: `mcp__bifrost__*` wildcard replaces individual `mcp__hub__search/get_schemas/execute`
+- Nexus runs as direct local MCP server (`mcp__nexus-local__*`) rather than through the gateway
+
+### Plugin Stack Evolution
+
+| Change | Before | After |
+|--------|--------|-------|
+| Context protection | None | `context-mode@context-mode` (mksglu/context-mode) |
+| Status line | Custom jq-based bash command | `claude-hud@claude-hud` (jarrodwatts/claude-hud) |
+| Discord plugin | `discord@claude-plugins-official` | Removed |
+| SDLC plugin | `claude-code-sdlc@local` | Removed |
+
+**context-mode** intercepts large tool outputs (Bash, Read) and routes them through a sandbox with FTS5 indexing — only summaries enter the context window. Key tools: `ctx_batch_execute`, `ctx_search`, `ctx_execute`, `ctx_execute_file`.
+
+**claude-hud** replaces the hand-crafted jq-based statusLine with a maintained plugin that parses Claude Code's JSON status input and renders project, model, and context usage.
+
+Both require `extraKnownMarketplaces` entries pointing to their GitHub repos.
+
+### Settings Changes
+
+- **Added:** `skipDangerousModePermissionPrompt: true` — skips extra confirmation for dangerous mode
+- **Added:** `extraKnownMarketplaces` — registers context-mode and claude-hud GitHub repos as plugin sources
+- **Removed:** `ANTHROPIC_BASE_URL` proxy env var — Langfuse tracing now handled entirely via `langfuse_hook.py` Stop hook, no API proxy needed
+- **Removed:** Individual `mcp__cmem__*` permission entries — cmem tools now naturally allowed through session flow
+
+### Skill Documentation Updates
+
+The skill's reference architecture (Pillar 3 Tier 0, Pillar 4 production settings, Pillar 6 capabilities table) was synced to match the actual running production setup as of 2026-04-06.
+
+### Research Tracking Update
+| Date | Topic | Source | Finding |
+|------|-------|--------|---------|
+| 2026-04-06 | v2.1.82–v2.1.92 | CLI version check | 11 releases since last update; no major breaking changes |
+| 2026-04-06 | MCP gateway | Production settings | Bifrost replaced mcp-hub; remote gateway pattern documented |
+| 2026-04-06 | Plugin stack | Production settings | context-mode and claude-hud adopted; discord and sdlc removed |
+| 2026-04-06 | Settings evolution | settings.json diff | skipDangerousModePermissionPrompt, extraKnownMarketplaces added; ANTHROPIC_BASE_URL removed |
 
 ---
 
