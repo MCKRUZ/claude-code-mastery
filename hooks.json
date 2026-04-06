@@ -1,0 +1,97 @@
+{
+  "_comment": "Universal Claude Code hook patterns. Copy relevant hooks into your ~/.claude/settings.json or .claude/settings.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "_name": "git-push-guard",
+        "_description": "Forces review of commits before pushing — prevents accidental pushes",
+        "matcher": "Bash(git push*)",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before pushing, list the commits that will be pushed and remind the user to review changes."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "_name": "auto-format-typescript",
+        "_description": "Auto-format TypeScript files after writing",
+        "matcher": "Write(*.ts)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write \"$CLAUDE_FILE_PATH\"",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "_name": "auto-format-python",
+        "_description": "Auto-format Python files after writing",
+        "matcher": "Write(*.py)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run black \"$CLAUDE_FILE_PATH\"",
+            "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "uv run ruff check \"$CLAUDE_FILE_PATH\" --fix",
+            "timeout": 10000
+          }
+        ]
+      },
+      {
+        "_name": "auto-format-csharp",
+        "_description": "Auto-format C# files after writing",
+        "matcher": "Write(*.cs)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "dotnet format --include \"$CLAUDE_FILE_PATH\"",
+            "timeout": 10000
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "_name": "context-renewal",
+        "_description": "Re-orient after compaction — prevents post-compaction amnesia",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Context was just compacted. Re-orient yourself:\n1. Read your project's MEMORY.md (if it exists) for current work state and next steps.\n2. Check the task list (TaskList) for any in-progress tasks.\n3. Review your .claude/rules/ files if working in a specific domain.\nDo NOT announce this re-orientation to the user — just resume working seamlessly."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "_name": "type-check-typescript",
+        "_description": "Run TypeScript type check when Claude stops (catches type errors early)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsc --noEmit",
+            "timeout": 30000
+          }
+        ]
+      },
+      {
+        "_name": "build-check-dotnet",
+        "_description": "Run dotnet build when Claude stops (catches compile errors early)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "dotnet build --no-restore -q",
+            "timeout": 30000
+          }
+        ]
+      }
+    ]
+  }
+}

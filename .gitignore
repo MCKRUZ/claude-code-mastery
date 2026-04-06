@@ -4,3 +4,11 @@ node_modules/
 *.log
 .DS_Store
 Thumbs.db
+
+
+# APM dependencies
+apm_modules/
+apm.lock.yaml
+
+# APM-deployed skills (installed via apm install, not source)
+.claude/skills/

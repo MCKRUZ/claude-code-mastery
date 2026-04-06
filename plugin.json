@@ -1,0 +1,27 @@
+{
+  "name": "claude-code-mastery",
+  "version": "1.9.0",
+  "description": "The definitive Claude Code setup, configuration, and mastery package. Battle-tested rules, agents, hooks, and 17 curated skills — one install for a complete development environment.",
+  "author": {
+    "name": "MCKRUZ"
+  },
+  "license": "MIT",
+  "repository": "MCKRUZ/claude-code-mastery",
+  "homepage": "https://github.com/MCKRUZ/claude-code-mastery",
+  "tags": [
+    "claude-code",
+    "configuration",
+    "setup",
+    "mastery",
+    "hooks",
+    "mcp",
+    "skills",
+    "agents",
+    "best-practices",
+    "windows"
+  ],
+  "skills": ["./"],
+  "instructions": ["./instructions"],
+  "agents": ["./agents"],
+  "hooks": "hooks.json"
+}

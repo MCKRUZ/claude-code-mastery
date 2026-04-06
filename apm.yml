@@ -1,0 +1,32 @@
+name: claude-code-mastery
+version: 1.9.0
+description: >
+  The definitive Claude Code setup, configuration, and mastery package.
+  Battle-tested rules, agents, hooks, and 16 curated skills.
+author: MCKRUZ
+dependencies:
+  apm:
+    # Anthropic official skills
+    - anthropics/skills/skills/docx
+    - anthropics/skills/skills/pdf
+
+    # MCKRUZ custom skills (master branch)
+    - MCKRUZ/demo-video-skill#master
+    - MCKRUZ/functional-design#master
+    - MCKRUZ/llm-cost-optimizer-skill#master
+    - MCKRUZ/security-review-skill#master
+    - MCKRUZ/skeptic-skill#master
+    - MCKRUZ/slides-skill#master
+    - MCKRUZ/tdd-workflow-skill#master
+
+    # Community skills
+    - mhattingpete/claude-skills-marketplace/visual-documentation-plugin/skills/dashboard-creator
+    - coleam00/excalidraw-diagram-skill
+    - blader/humanizer
+    - SpillwaveSolutions/project-memory
+    - unicodeveloper/shannon
+    - nicobailon/visual-explainer
+  mcp: []
+devDependencies:
+  apm: []
+scripts: {}
