@@ -1,0 +1,40 @@
+---
+description: Coding style conventions for C#, TypeScript, Angular, and Python projects
+alwaysApply: true
+---
+
+# Coding Style
+
+## Immutability (CRITICAL)
+- C#: IReadOnlyList<T>/IReadOnlyDictionary<K,V> for public surfaces, readonly arrays for private backing fields, init-only properties for DTOs/config. Use records for simple value types, but NOT for polymorphic hierarchies (use classes with factory methods instead).
+- TypeScript: spread operators, never mutate objects/arrays. `{ ...obj, key }` and `[...arr, item]`.
+- NgRx reducers: always return new state objects.
+
+## File Organization
+- Clean Architecture with type-organized layers (Exceptions, Extensions, Interfaces, Models, Services — not feature folders within layers).
+- Many small files > few large files. Most files under 150 lines, 400 max.
+- High cohesion, low coupling. One class per file.
+
+## Naming
+- C#: PascalCase (classes/methods/props), `_camelCase` (private fields), camelCase (locals/params), `I` prefix for interfaces.
+- TypeScript: PascalCase (types/classes), camelCase (vars/funcs), kebab-case (files).
+- Python: snake_case (functions/variables), PascalCase (classes), UPPER_SNAKE_CASE (constants).
+
+## Error Handling
+- C#: Result<T> for expected failures (validation, auth, business rules). Exceptions only for truly exceptional conditions. Factory methods: `Result<T>.Success(value)`, `Result<T>.Fail(message)`, `Result.ValidationFailure(errors)`.
+- Angular: catchError in pipes, use logger service (no console.log), notify user.
+- Always: structured JSON logging, never swallow errors silently.
+
+## Validation
+- C#: FluentValidation on all DTOs, auto-discovered via assembly scanning, applied through MediatR pipeline behavior. Parallel validation with `Task.WhenAll`.
+- Angular: Reactive Forms with validators.
+- Validate at system boundaries only — trust internal code.
+
+## Dependency Injection
+- Each layer provides `DependencyInjection.cs` with `Add*Dependencies()` extension methods.
+- Use keyed DI (`AddKeyedSingleton/Transient`) for extensible registrations (tools, connectors).
+- MediatR pipeline behavior order matters — document registration order in DI.
+
+## C# Project Defaults
+- `<ImplicitUsings>enable</ImplicitUsings>` and `<Nullable>enable</Nullable>` in all .csproj files.
+- Options pattern with `IOptionsMonitor<T>` for configuration. Strongly-typed config hierarchies.

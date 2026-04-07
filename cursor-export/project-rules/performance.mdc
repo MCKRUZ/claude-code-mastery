@@ -1,0 +1,19 @@
+---
+description: Context window management, research limits, and build troubleshooting approach
+alwaysApply: true
+---
+
+# Performance
+
+## Context Window
+- Avoid last 20% for large refactoring or multi-file features. Single-file edits and docs are fine near the limit.
+- When context is getting long, finish current work cleanly rather than starting new complex tasks.
+
+## Research Time Limits
+- If a single site or source takes more than 5 minutes to fetch or return useful results, abandon that source and move on.
+- One or two attempts per source max, then pivot to the next.
+
+## Build Troubleshooting
+- Build fails → analyze the actual error message first, don't guess.
+- Fix incrementally — one error at a time, verify between fixes.
+- Don't suppress warnings to make a build pass. Fix the underlying issue.

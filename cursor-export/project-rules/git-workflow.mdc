@@ -1,0 +1,28 @@
+---
+description: Git commit message conventions, PR workflow, and planning approach
+alwaysApply: true
+---
+
+# Git & Workflow
+
+## Planning
+- Plan before coding on any non-trivial task (3+ files or unclear requirements).
+- For complex features (5+ files, new services): outline the approach and get approval before implementing.
+- Review your own work before marking anything as done.
+
+## Commit Messages
+Format: `type: description` (feat, fix, refactor, docs, test, chore, perf, ci)
+- Imperative mood, lowercase, no period at end
+- Under 72 characters
+- Body optional — explain "why" not "what" when included
+
+## PR Workflow
+1. Analyze full commit history with `git diff [base-branch]...HEAD`
+2. Draft comprehensive summary with test plan
+3. Push with `-u` flag if new branch
+4. PR title under 70 characters — use description for details
+
+## Branch Hygiene
+- Never force-push to main/master
+- Never commit secrets, .env files, or credentials
+- Use feature branches for all work

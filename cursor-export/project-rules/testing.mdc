@@ -1,0 +1,41 @@
+---
+description: Testing conventions, bug fix workflow, TDD, mocking discipline, and test commands
+alwaysApply: true
+---
+
+# Testing
+
+## Bug Fix Workflow (MANDATORY)
+When I report a bug, don't start by trying to fix it. Instead:
+1. Write a test that reproduces the bug (prove it fails)
+2. Have subagents try to fix the bug and prove it with a passing test
+3. The fix isn't done until the test passes
+This applies to all projects, always.
+
+## Coverage: 80% minimum
+Unit + Integration + E2E for critical flows.
+
+## TDD (when requested)
+RED (write failing test) → GREEN (minimal implementation) → REFACTOR (clean up, verify coverage)
+
+## Test Naming
+- C#: `MethodName_Scenario_ExpectedResult` (e.g., `Handle_InvalidRequest_ReturnsValidationFailure`)
+- TypeScript/Angular: descriptive `it('should ...')` strings
+- Python: `test_scenario_expected_result`
+
+## Mocking Discipline
+- Prefer real implementations over mocks. Use `WebApplicationFactory<Program>` + in-memory DB for integration tests.
+- Only mock external services (HTTP clients, third-party APIs) and time (`TimeProvider`).
+- Never mock the thing you're testing. Never mock value objects or DTOs.
+
+## Patterns
+- C#: xUnit, Arrange-Act-Assert, Moq (sparingly), `WebApplicationFactory<Program>` + in-memory DB for pipeline tests
+- Angular: Jasmine/Karma, `HttpTestingController`, `afterEach(() => httpMock.verify())`
+- Python: pytest, fixtures over setup methods, parametrize for variant cases
+- E2E: Playwright with `data-testid` selectors
+
+## Commands
+- C#: `dotnet test`, `dotnet test --collect:"XPlat Code Coverage"`
+- Angular: `ng test --code-coverage`, `ng test --watch=false --browsers=ChromeHeadless`
+- Python: `pytest`, `pytest --cov`
+- E2E: `npx playwright test`
