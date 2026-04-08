@@ -39,7 +39,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ExportDir = $PSScriptRoot
-$AgentsSkillsDir = Join-Path $HOME ".agents" "skills"
+$AgentsSkillsDir = Join-Path (Join-Path $HOME ".agents") "skills"
 $Installed = @{ Skills = 0; Rules = 0; Subagents = 0; Commands = 0 }
 
 function Write-Step($msg) { Write-Host "  [+] $msg" -ForegroundColor Green }
@@ -93,7 +93,7 @@ if (-not (Test-Path $ProjectPath)) {
 $cursorDir = Join-Path $ProjectPath ".cursor"
 $cursorRulesDir = Join-Path $cursorDir "rules"
 $cursorAgentsDir = Join-Path $cursorDir "agents"
-$cursorCommandsDir = Join-Path $cursorDir "rules" "commands"
+$cursorCommandsDir = Join-Path (Join-Path $cursorDir "rules") "commands"
 
 # --- RULES --------------------------------------------------------------------
 Write-Host ""
