@@ -22,13 +22,12 @@
     Show what would be done without making changes.
 
 .EXAMPLE
-    # Install everything into a project
-    .\install-cursor.ps1 -ProjectPath "C:\Users\kruz7\OneDrive\Documents\Code Repos\MCKRUZ\microsoft-agentic-harness"
+    .\install-cursor.ps1 -ProjectPath "C:\my\project"
 
-    # Install only global skills
+.EXAMPLE
     .\install-cursor.ps1 -SkillsOnly
 
-    # Preview what would happen
+.EXAMPLE
     .\install-cursor.ps1 -ProjectPath "C:\my\project" -DryRun
 #>
 
@@ -47,8 +46,9 @@ function Write-Step($msg) { Write-Host "  [+] $msg" -ForegroundColor Green }
 function Write-Skip($msg) { Write-Host "  [-] $msg" -ForegroundColor Yellow }
 function Write-Info($msg) { Write-Host "  [i] $msg" -ForegroundColor Cyan }
 
-# ─── SKILLS (Global) ───────────────────────────────────────────────────────────
-Write-Host "`n=== Installing Skills to ~/.agents/skills/ ===" -ForegroundColor White
+# --- SKILLS (Global) ----------------------------------------------------------
+Write-Host ""
+Write-Host "=== Installing Skills to ~/.agents/skills/ ===" -ForegroundColor White
 
 $skillsSource = Join-Path $ExportDir "skills"
 if (Test-Path $skillsSource) {
@@ -69,15 +69,18 @@ if (Test-Path $skillsSource) {
 }
 
 if ($SkillsOnly) {
-    Write-Host "`n=== Summary ===" -ForegroundColor White
+    Write-Host ""
+    Write-Host "=== Summary ===" -ForegroundColor White
     Write-Info "$($Installed.Skills) skills installed"
-    Write-Host "`nDon't forget to paste global-rules.md into Cursor > Settings > General > Rules for AI" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  Don't forget to paste global-rules.md into Cursor > Settings > General > Rules for AI" -ForegroundColor Yellow
     exit 0
 }
 
-# ─── PROJECT-LEVEL CONFIGS ────────────────────────────────────────────────────
+# --- PROJECT-LEVEL CONFIGS ----------------------------------------------------
 if (-not $ProjectPath) {
-    Write-Host "`nNo -ProjectPath specified. Use -ProjectPath to install project-level configs." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "No -ProjectPath specified. Use -ProjectPath to install project-level configs." -ForegroundColor Yellow
     Write-Host "Example: .\install-cursor.ps1 -ProjectPath 'C:\my\project'" -ForegroundColor Yellow
     exit 0
 }
@@ -92,8 +95,9 @@ $cursorRulesDir = Join-Path $cursorDir "rules"
 $cursorAgentsDir = Join-Path $cursorDir "agents"
 $cursorCommandsDir = Join-Path $cursorDir "rules" "commands"
 
-# ─── RULES ─────────────────────────────────────────────────────────────────────
-Write-Host "`n=== Installing Rules to .cursor/rules/ ===" -ForegroundColor White
+# --- RULES --------------------------------------------------------------------
+Write-Host ""
+Write-Host "=== Installing Rules to .cursor/rules/ ===" -ForegroundColor White
 
 $rulesSource = Join-Path $ExportDir "project-rules"
 if (Test-Path $rulesSource) {
@@ -112,8 +116,9 @@ if (Test-Path $rulesSource) {
     Write-Skip "No project-rules directory found"
 }
 
-# ─── SUBAGENTS ─────────────────────────────────────────────────────────────────
-Write-Host "`n=== Installing Subagents to .cursor/agents/ ===" -ForegroundColor White
+# --- SUBAGENTS ----------------------------------------------------------------
+Write-Host ""
+Write-Host "=== Installing Subagents to .cursor/agents/ ===" -ForegroundColor White
 
 $agentsSource = Join-Path $ExportDir "subagents"
 if (Test-Path $agentsSource) {
@@ -132,9 +137,10 @@ if (Test-Path $agentsSource) {
     Write-Skip "No subagents directory found"
 }
 
-# ─── COMMANDS (as Manual rules) ───────────────────────────────────────────────
-Write-Host "`n=== Installing Commands as Manual Rules to .cursor/rules/commands/ ===" -ForegroundColor White
-Write-Info "Cursor doesn't have file-based commands. These are installed as Manual rules — invoke with @ in chat."
+# --- COMMANDS (as Manual rules) -----------------------------------------------
+Write-Host ""
+Write-Host "=== Installing Commands as Manual Rules to .cursor/rules/commands/ ===" -ForegroundColor White
+Write-Info "Cursor does not have file-based commands. These are installed as Manual rules -- invoke with @ in chat."
 
 $commandsSource = Join-Path $ExportDir "commands"
 if (Test-Path $commandsSource) {
@@ -145,12 +151,9 @@ if (Test-Path $commandsSource) {
         $mdcName = $_.BaseName + ".mdc"
         $targetFile = Join-Path $cursorCommandsDir $mdcName
 
-        # Read source and wrap as Manual rule if not already .mdc format
         $content = Get-Content $_.FullName -Raw
 
-        # Check if it already has frontmatter
         if ($content -match "^---") {
-            # Convert existing frontmatter to Manual rule format
             $content = $content -replace "(?m)^alwaysApply:.*$", ""
             $content = $content -replace "(?m)^globs:.*$", ""
         }
@@ -165,17 +168,19 @@ if (Test-Path $commandsSource) {
     Write-Skip "No commands directory found"
 }
 
-# ─── SUMMARY ──────────────────────────────────────────────────────────────────
-Write-Host "`n=== Summary ===" -ForegroundColor White
+# --- SUMMARY ------------------------------------------------------------------
+Write-Host ""
+Write-Host "=== Summary ===" -ForegroundColor White
 if ($DryRun) {
-    Write-Host "  DRY RUN — no files were written" -ForegroundColor Yellow
+    Write-Host "  DRY RUN -- no files were written" -ForegroundColor Yellow
 }
 Write-Info "$($Installed.Skills) skills installed (global)"
 Write-Info "$($Installed.Rules) rules installed to $cursorRulesDir"
 Write-Info "$($Installed.Subagents) subagents installed to $cursorAgentsDir"
 Write-Info "$($Installed.Commands) commands installed as manual rules to $cursorCommandsDir"
 
-Write-Host "`n=== Manual Steps Required ===" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "=== Manual Steps Required ===" -ForegroundColor Yellow
 Write-Host "  1. Open Cursor > Settings > General > Rules for AI" -ForegroundColor Yellow
 Write-Host "  2. Paste the contents of: $ExportDir\global-rules.md" -ForegroundColor Yellow
 Write-Host "  3. Verify skills appear in: Cursor > Settings > Rules, Skills, Subagents > Skills" -ForegroundColor Yellow
