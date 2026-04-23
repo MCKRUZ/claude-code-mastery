@@ -1,7 +1,7 @@
 {
   "name": "claude-code-mastery",
   "version": "3.0.0",
-  "description": "The definitive Claude Code harness. Battle-tested rules, quality-gate hooks, 19 curated skills, and a complete development workflow — one install for a production-grade environment.",
+  "description": "The definitive Claude Code harness. Battle-tested rules, quality-gate hooks, 19 curated skills, and a complete development workflow.",
   "author": {
     "name": "MCKRUZ",
     "url": "https://github.com/MCKRUZ"
@@ -11,16 +11,12 @@
   "homepage": "https://github.com/MCKRUZ/claude-code-mastery",
   "keywords": [
     "claude-code",
-    "configuration",
-    "setup",
-    "mastery",
+    "harness",
     "hooks",
     "quality-gates",
     "skills",
-    "best-practices",
     "windows"
   ],
-  "skills": ["./"],
-  "commands": ["./commands"],
-  "instructions": ["./instructions"]
+  "skills": ["../"],
+  "commands": ["../commands"]
 }

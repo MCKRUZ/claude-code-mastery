@@ -1,0 +1,46 @@
+{
+  "name": "claude-code-mastery",
+  "owner": {
+    "name": "MCKRUZ",
+    "email": "matthewkruczek@yahoo.com"
+  },
+  "metadata": {
+    "description": "Production-grade Claude Code harness with quality-gate hooks, 19 curated skills, 9 rules, and a 5-phase development workflow."
+  },
+  "plugins": [
+    {
+      "name": "claude-code-mastery",
+      "source": "../",
+      "description": "The definitive Claude Code setup and configuration package. Includes quality-gate hooks (git safety, config protection, dev-server blocking, console.log warnings), strategic compaction, MCP health checks, verification loop, agent introspection debugging, and 19 curated skills spanning dashboards, presentations, security testing, TDD, and more.",
+      "version": "3.0.0",
+      "author": {
+        "name": "MCKRUZ",
+        "url": "https://github.com/MCKRUZ"
+      },
+      "homepage": "https://github.com/MCKRUZ/claude-code-mastery",
+      "repository": "MCKRUZ/claude-code-mastery",
+      "license": "MIT",
+      "keywords": [
+        "claude-code",
+        "harness",
+        "hooks",
+        "quality-gates",
+        "skills",
+        "windows"
+      ],
+      "category": "workflow",
+      "tags": [
+        "setup",
+        "configuration",
+        "hooks",
+        "skills",
+        "rules",
+        "quality-gates",
+        "security",
+        "tdd",
+        "windows-native"
+      ],
+      "strict": false
+    }
+  ]
+}

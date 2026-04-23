@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(head -5 \"C:/Users/kruz7/.claude/skills/autoresearch-universal/\"*.md)",
+      "Bash(mkdir -p C:/Users/kruz7/.claude/skills/autoresearch)",
+      "Bash(cp C:/Users/kruz7/AppData/Local/Temp/autoresearch-skill/SKILL.md C:/Users/kruz7/.claude/skills/autoresearch/SKILL.md)",
+      "Bash(cp C:/Users/kruz7/AppData/Local/Temp/autoresearch-skill/skills/autoresearch/evaluator-contract.md C:/Users/kruz7/.claude/skills/autoresearch/)",
+      "Bash(cp C:/Users/kruz7/AppData/Local/Temp/autoresearch-skill/skills/autoresearch/stuck-detection.md C:/Users/kruz7/.claude/skills/autoresearch/)",
+      "Bash([ -f \"$REPO/skills/$dir/SKILL.md\" ])",
+      "Bash(mkdir -p /c/Users/kruz7/.claude/hooks/quality-gates)",
+      "Bash(mkdir -p /c/Users/kruz7/.claude/hooks/mcp-health)",
+      "Read(//c/Users/kruz7/.claude/hooks//**)",
+      "Bash(mkdir -p \"/c/Users/kruz7/OneDrive/Documents/Code Repos/MCKRUZ/claude-code-mastery/.claude/skills/verification-loop\")",
+      "Bash(mkdir -p \"/c/Users/kruz7/OneDrive/Documents/Code Repos/MCKRUZ/claude-code-mastery/.claude/skills/agent-introspection\")"
     ]
   }
 }
